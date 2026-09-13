@@ -129,21 +129,17 @@ def ingest_source(spark: SparkSession, config: PipelineConfig, source_key: str) 
     bronze_df = _add_bronze_metadata(raw_df, config, source)
 
     target_path = config.table_path("bronze", source.bronze_table)
-    # bronze_df é lido/computado uma única vez (persist) e reaproveitado
-    # para o count() e o write(): sem isso, Spark recalcularia o plano do
-    # zero para cada ação (2 jobs), o que além de custar caro também expôs
-    # instabilidade do worker Python em execução local no Windows.
-    bronze_df.persist()
-    try:
-        row_count = bronze_df.count()
-        (
-            bronze_df.write.format("delta")
-            .mode("append")
-            .option("mergeSchema", "true")
-            .save(target_path)
-        )
-    finally:
-        bronze_df.unpersist()
+    # Nota: sem persist() (não suportado em Databricks Serverless — ver
+    # docs/decisions.md), count() e write() recalculam o plano cada um. Para
+    # o volume deste pipeline isso é irrelevante em custo; portabilidade
+    # entre serverless e cluster clássico importa mais aqui.
+    row_count = bronze_df.count()
+    (
+        bronze_df.write.format("delta")
+        .mode("append")
+        .option("mergeSchema", "true")
+        .save(target_path)
+    )
 
     register_processed_files(spark, config, source.name, pending)
     logger.info("ingestão concluída", tabela=source.bronze_table, linhas=row_count)

@@ -14,6 +14,8 @@ from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql import functions as F
 from pyspark.sql.types import StringType, StructField, StructType
 
+from src.utils.spark_helpers import build_literal_df
+
 SEVERIDADE_RANK = {"BAIXA": 1, "MEDIA": 2, "ALTA": 3, "CRITICA": 4}
 
 
@@ -59,7 +61,7 @@ def read_silver_or_empty(spark: SparkSession, path: str, columns: list[str]) -> 
     if DeltaTable.isDeltaTable(spark, path):
         return spark.read.format("delta").load(path)
     schema = StructType([StructField(c, StringType()) for c in columns])
-    return spark.createDataFrame(spark.sparkContext.emptyRDD(), schema)
+    return build_literal_df(spark, [], schema)
 
 
 def merge_by_composite_key(

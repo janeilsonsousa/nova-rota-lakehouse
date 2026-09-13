@@ -56,8 +56,6 @@ def apply_quality_gate(
     )
     valid = with_flags.filter(F.size("_motivos") == 0).drop("_motivos")
 
-    valid.persist()
-    quarantined.persist()
     valid_count = valid.count()
     quarantine_count = quarantined.count()
 

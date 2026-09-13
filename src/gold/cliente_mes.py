@@ -110,12 +110,10 @@ def build_gold_cliente_mes(spark: SparkSession, config: PipelineConfig) -> dict:
     staged = result.withColumn("batch_id", F.lit(config.batch_id)).withColumn(
         "timestamp_processamento_gold", F.current_timestamp()
     ).select(*FINAL_COLS)
-    staged.persist()
     gravados = staged.count()
 
     target_path = config.table_path("gold", "gold_cliente_mes")
     merge_by_composite_key(spark, target_path, staged, key_cols=["id_cliente", "ano_mes"], final_cols=FINAL_COLS)
-    staged.unpersist()
 
     logger.info("gold_cliente_mes atualizada", pares_recalculados=gravados)
     return {"tabela": "gold_cliente_mes", "gravados": gravados}

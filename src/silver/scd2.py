@@ -141,7 +141,6 @@ def apply_scd2(
         *LINEAGE_COLS, "timestamp_processamento_silver",
     ]
     timeline = timeline.select(*final_cols)
-    timeline.persist()
     versoes_gravadas = timeline.count()
     chaves_afetadas = timeline.select(business_key).distinct().count()
 
@@ -164,7 +163,6 @@ def apply_scd2(
             .execute()
         )
 
-    timeline.unpersist()
     return Scd2Result(chaves_afetadas=chaves_afetadas, versoes_gravadas=versoes_gravadas)
 
 
