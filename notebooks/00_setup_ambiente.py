@@ -57,6 +57,29 @@ print("Ambiente pronto. unity_catalog_disponivel =", unity_catalog_disponivel)
 
 # COMMAND ----------
 
+# MAGIC %md ## Volume de armazenamento (Delta path-based)
+# MAGIC
+# MAGIC O pipeline lê/escreve tabelas por **path físico**
+# MAGIC (`config.table_path(...)`), não por nome de catálogo — é o que torna o
+# MAGIC mesmo código portátil entre execução local e Databricks (ver
+# MAGIC `src/utils/catalog.py` para o registro complementar por nome).
+# MAGIC
+# MAGIC O filesystem do Workspace (onde este notebook/repo vive) é **somente
+# MAGIC leitura** para escrita de dados — por isso as tabelas Delta precisam
+# MAGIC morar em um Volume Unity Catalog (ou DBFS), nunca em `/Workspace/...`.
+
+# COMMAND ----------
+
+VOLUME_BASE_PATH = None
+if unity_catalog_disponivel:
+    spark.sql(f"CREATE VOLUME IF NOT EXISTS {CATALOG}.bronze.storage")
+    VOLUME_BASE_PATH = f"/Volumes/{CATALOG}/bronze/storage"
+    print("Volume de armazenamento pronto em:", VOLUME_BASE_PATH)
+else:
+    print("Sem Unity Catalog: use um path gravável (ex. dbfs:/tmp/...) como --base-path.")
+
+# COMMAND ----------
+
 # MAGIC %md ## Validação rápida
 
 # COMMAND ----------

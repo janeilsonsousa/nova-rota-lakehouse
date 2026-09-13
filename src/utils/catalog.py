@@ -28,7 +28,18 @@ def register_delta_table(spark: SparkSession, config: PipelineConfig, layer: str
     if not DeltaTable.isDeltaTable(spark, path):
         return
     fqn = config.table_fqn(layer, table)
-    spark.sql(f"CREATE TABLE IF NOT EXISTS {fqn} USING DELTA LOCATION '{path}'")
+    try:
+        spark.sql(f"CREATE TABLE IF NOT EXISTS {fqn} USING DELTA LOCATION '{path}'")
+    except Exception:
+        # Best-effort: um Volume Unity Catalog é válido para arquivos
+        # (dado bruto, checkpoints, quarentena) mas NÃO é aceito como
+        # LOCATION de tabela registrada no catálogo (Unity Catalog exige
+        # um External Location com storage credential para isso, ou uma
+        # tabela totalmente managed sem LOCATION explícito). O pipeline
+        # já lê/escreve por path físico e não depende deste registro para
+        # funcionar — ele só existe para conveniência de consulta SQL por
+        # nome. Ver docs/decisions.md.
+        pass
 
 
 def register_known_tables(spark: SparkSession, config: PipelineConfig, layer: str, tables: list[str]) -> None:

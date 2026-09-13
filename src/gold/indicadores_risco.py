@@ -95,14 +95,12 @@ def build_gold_indicadores_risco(spark: SparkSession, config: PipelineConfig) ->
     staged = result.withColumn("batch_id", F.lit(config.batch_id)).withColumn(
         "timestamp_processamento_gold", F.current_timestamp()
     ).select(*FINAL_COLS)
-    staged.persist()
     gravados = staged.count()
 
     merge_by_composite_key(
         spark, config.table_path("gold", "gold_indicadores_risco"), staged,
         key_cols=["id_cliente", "ano_mes"], final_cols=FINAL_COLS,
     )
-    staged.unpersist()
 
     logger.info("gold_indicadores_risco atualizada", pares_recalculados=gravados)
     return {"tabela": "gold_indicadores_risco", "gravados": gravados}

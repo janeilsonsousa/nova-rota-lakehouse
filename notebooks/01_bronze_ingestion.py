@@ -26,7 +26,9 @@ if str(repo_root) not in sys.path:
 dbutils.widgets.text("catalog", "nova_rota")
 dbutils.widgets.text("run_mode", "incremental")
 dbutils.widgets.text("raw_path", str(repo_root / "data" / "raw" / "nova_rota_input"))
-dbutils.widgets.text("base_path", "")  # vazio = default (data/lakehouse)
+dbutils.widgets.text("base_path", "/Volumes/nova_rota/bronze/storage/lakehouse")
+dbutils.widgets.text("checkpoint_path", "/Volumes/nova_rota/bronze/storage/checkpoints")
+dbutils.widgets.text("quarantine_path", "/Volumes/nova_rota/bronze/storage/lakehouse/_quarentena")
 
 # COMMAND ----------
 
@@ -41,6 +43,10 @@ overrides = {
 }
 if dbutils.widgets.get("base_path"):
     overrides["base_path"] = dbutils.widgets.get("base_path")
+if dbutils.widgets.get("checkpoint_path"):
+    overrides["checkpoint_path"] = dbutils.widgets.get("checkpoint_path")
+if dbutils.widgets.get("quarantine_path"):
+    overrides["quarantine_path"] = dbutils.widgets.get("quarantine_path")
 
 config = get_config(**overrides)
 print("Configuração desta execução:", config.as_dict())

@@ -237,12 +237,18 @@ USING (
     -- fonte: um novo lote de transações já limpo/validado (equivalente ao
     -- `staged` calculado em src/silver/transacoes.py após o quality gate)
     SELECT
-        id_transacao, id_cartao, data_transacao, dt_transacao, valor, mcc,
-        estabelecimento, canal, pais, moeda, device_id, ip_origem,
+        id_transacao, id_cartao, data_transacao, CAST(data_transacao AS DATE) AS dt_transacao,
+        valor, mcc, estabelecimento, canal, pais, moeda, device_id, ip_origem,
         schema_version, arquivo_origem, batch_id, timestamp_ingestao,
         CURRENT_TIMESTAMP() AS timestamp_processamento_silver
-    FROM nova_rota.bronze.bronze_transacoes
-    WHERE batch_id = :batch_id_atual   -- parametrizado pela execução (widget/param do notebook)
+    FROM (
+        SELECT *, ROW_NUMBER() OVER (
+            PARTITION BY id_transacao ORDER BY timestamp_ingestao DESC
+        ) AS rn
+        FROM nova_rota.bronze.bronze_transacoes
+        WHERE batch_id = :batch_id_atual   -- parametrizado pela execução (widget/param do notebook)
+    )
+    WHERE rn = 1  -- mesma id_transacao pode se repetir dentro do lote (duplicidade intra-arquivo)
 ) AS s
 ON t.id_transacao = s.id_transacao
 WHEN MATCHED THEN UPDATE SET *

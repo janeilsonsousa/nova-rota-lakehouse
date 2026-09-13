@@ -10,7 +10,8 @@ notebooks executados célula a célula, e resultados de testes.
 |---|---|
 | `local_pipeline_run.log` | Log completo (JSON estruturado) de uma execução local ponta a ponta (`python -m src.run_pipeline`), Bronze → Prata → Ouro, incluindo prova de idempotência (reexecução processando 0 linhas novas). |
 | `pytest_full_suite.log` | Saída da suíte completa de testes (28 testes: 14 unitários + 14 de transformação). |
-| `databricks_*.png` | Capturas de tela do workspace Databricks Free Edition com os notebooks `notebooks/00`–`04` executados (a preencher após a execução real no workspace). |
+| `databricks_03_gold_volumetria.jpg` | Captura do notebook `03_gold_data_products` executado no Databricks (Serverless), mostrando as 8 tabelas Ouro criadas com sucesso. |
+| `databricks_04_sql_ntile_percentrank.jpg` | Captura do notebook `04_sql_analysis` executado no Databricks, resultado da query de segmentação por NTILE/PERCENT_RANK. |
 
 ## Como reproduzir
 
