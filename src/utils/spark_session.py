@@ -74,6 +74,11 @@ def get_spark(app_name: str = "nova_rota_lakehouse") -> SparkSession:
         .config("spark.sql.files.minPartitionNum", "1")
         .config("spark.ui.showConsoleProgress", "false")
         .config("spark.driver.memory", "2g")
+        # Evita reaproveitar o worker Python entre tasks: numa sessão longa
+        # (dezenas de stages) o worker reciclado eventualmente entra num
+        # estado ruim e derruba a próxima ação que precise transferir dados
+        # reais para o driver (collect/take/isEmpty). Ver docs/decisions.md.
+        .config("spark.python.worker.reuse", "false")
     )
     spark = configure_spark_with_delta_pip(builder).getOrCreate()
     spark.sparkContext.setLogLevel("WARN")
