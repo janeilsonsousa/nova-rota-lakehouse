@@ -1,0 +1,7 @@
+arquivo,registros_aproximados,objetivo
+clientes_cdc.csv,38,CDC de clientes + histórico + qualidade
+contas_cdc.csv,41,CDC de contas + status + integridade referencial
+cartoes_cdc.csv,49,CDC de cartões + limite/status + integridade referencial
+eventos_risco.csv,30,Eventos de risco e inconsistência de vínculo
+estornos.csv,20,Estornos e referências inválidas
+transacoes/*.csv,581,Partições, duplicidade, atraso, qualidade e schema evolution

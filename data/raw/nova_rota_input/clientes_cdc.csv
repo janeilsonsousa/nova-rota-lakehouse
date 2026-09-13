@@ -1,0 +1,39 @@
+id_cliente,cpf,nome,cidade,estado,renda,segmento,data_atualizacao,operacao
+C0001,100.000.000-01,Cliente 01,Campinas,SP,18500,Empresarial,2026-01-05 00:00:00,I
+C0002,100.000.000-02,Cliente 02,Porto Alegre,RS,3500,Varejo,2026-01-12 00:00:00,I
+C0003,100.000.000-03,Cliente 03,Campinas,SP,2500,Varejo,2026-01-18 00:00:00,I
+C0004,100.000.000-04,Cliente 04,Campinas,SP,3500,Varejo,2026-01-11 00:00:00,I
+C0005,100.000.000-05,Cliente 05,Porto Alegre,RS,3500,Digital,2026-01-18 00:00:00,I
+C0006,100.000.000-06,Cliente 06,Florianópolis,SC,3500,Digital,2026-01-05 00:00:00,I
+C0007,100.000.000-07,Cliente 07,Belo Horizonte,MG,3500,Alta Renda,2026-01-13 00:00:00,I
+C0008,100.000.000-08,Cliente 08,Belo Horizonte,MG,2500,Digital,2026-01-08 00:00:00,I
+C0009,100.000.000-09,Cliente 09,Campinas,SP,4800,Empresarial,2026-01-16 00:00:00,I
+C0010,100.000.000-10,Cliente 10,São Paulo,SP,12000,Varejo,2026-01-19 00:00:00,I
+C0011,100.000.000-11,Cliente 11,Rio de Janeiro,RJ,12000,Empresarial,2026-01-07 00:00:00,I
+C0012,100.000.000-12,Cliente 12,Belo Horizonte,MG,18500,Varejo,2026-01-11 00:00:00,I
+C0013,100.000.000-13,Cliente 13,São Paulo,SP,4800,Varejo,2026-01-12 00:00:00,I
+C0014,100.000.000-14,Cliente 14,Porto Alegre,RS,7200,Empresarial,2026-01-08 00:00:00,I
+C0015,100.000.000-15,Cliente 15,Goiânia,GO,3500,Empresarial,2026-01-16 00:00:00,I
+C0016,100.000.000-16,Cliente 16,Belo Horizonte,MG,18500,Empresarial,2026-01-11 00:00:00,I
+C0017,100.000.000-17,Cliente 17,Campinas,SP,12000,Alta Renda,2026-01-10 00:00:00,I
+C0018,100.000.000-18,Cliente 18,Curitiba,PR,7200,Empresarial,2026-01-19 00:00:00,I
+C0019,100.000.000-19,Cliente 19,Porto Alegre,RS,2500,Alta Renda,2026-01-15 00:00:00,I
+C0020,100.000.000-20,Cliente 20,São Paulo,SP,7200,Empresarial,2026-01-15 00:00:00,I
+C0021,100.000.000-21,Cliente 21,Campinas,SP,12000,Empresarial,2026-01-11 00:00:00,I
+C0022,100.000.000-22,Cliente 22,Porto Alegre,RS,7200,Digital,2026-01-20 00:00:00,I
+C0023,100.000.000-23,Cliente 23,Curitiba,PR,3500,Alta Renda,2026-01-13 00:00:00,I
+C0024,100.000.000-24,Cliente 24,Florianópolis,SC,12000,Digital,2026-01-18 00:00:00,I
+C0025,100.000.000-25,Cliente 25,Belo Horizonte,MG,3500,Digital,2026-01-12 00:00:00,I
+C0026,100.000.000-26,Cliente 26,Campinas,SP,2500,Alta Renda,2026-01-06 00:00:00,I
+C0027,100.000.000-27,Cliente 27,Curitiba,PR,12000,Varejo,2026-01-18 00:00:00,I
+C0028,100.000.000-28,Cliente 28,Rio de Janeiro,RJ,12000,Digital,2026-01-17 00:00:00,I
+C0029,100.000.000-29,Cliente 29,Florianópolis,SC,18500,Varejo,2026-01-05 00:00:00,I
+C0030,100.000.000-30,Cliente 30,Florianópolis,SC,2500,Empresarial,2026-01-15 00:00:00,I
+C0003,100.000.000-03,Cliente 03,Caxias do Sul,RS,3000,Varejo,2026-02-13 00:00:00,U
+C0007,100.000.000-07,Cliente 07,Caxias do Sul,RS,4000,Alta Renda,2026-02-17 00:00:00,U
+C0012,100.000.000-12,Cliente 12,Joinville,SC,21000,Alta Renda,2026-02-22 00:00:00,U
+C0018,100.000.000-18,Cliente 18,Londrina,PR,9700,Empresarial,2026-02-28 00:00:00,U
+C0024,100.000.000-24,Cliente 24,Santos,SP,14500,Alta Renda,2026-03-06 00:00:00,U
+C0005,100.000.000-05,Cliente 05,Porto Alegre,RS,3500,Digital,2026-01-18 00:00:00,I
+C0099,111.111.111-11,Cliente CPF Inválido,Porto Alegre,RS,3500,Varejo,2026-02-28 09:00:00,I
+C0100,100.000.000-03,Cliente Dados Inválidos,Cidade Inexistente,XX,-500,Varejo,2026-02-28 10:00:00,I

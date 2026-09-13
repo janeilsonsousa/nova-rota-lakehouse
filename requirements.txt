@@ -1,0 +1,9 @@
+# Runtime (compatível com Databricks Runtime 15.x / 14.x LTS - Spark 3.5)
+pyspark==3.5.1
+delta-spark==3.2.0
+
+# Dev / testes (não necessário em cluster Databricks, onde pyspark/delta já vêm no runtime)
+pytest==8.2.2
+pytest-cov==5.0.0
+chispa==0.10.1
+ruff==0.5.5
