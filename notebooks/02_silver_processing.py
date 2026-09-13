@@ -22,8 +22,10 @@ if str(repo_root) not in sys.path:
 # COMMAND ----------
 
 dbutils.widgets.text("catalog", "nova_rota")
-dbutils.widgets.text("run_mode", "incremental")
-dbutils.widgets.text("base_path", "")
+dbutils.widgets.text("run_mode", "full")  # cada notebook gera seu próprio batch_id; full evita "nada a fazer" entre execuções separadas
+dbutils.widgets.text("base_path", "/Volumes/nova_rota/bronze/storage/lakehouse")
+dbutils.widgets.text("checkpoint_path", "/Volumes/nova_rota/bronze/storage/checkpoints")
+dbutils.widgets.text("quarantine_path", "/Volumes/nova_rota/bronze/storage/lakehouse/_quarentena")
 
 # COMMAND ----------
 
@@ -33,6 +35,10 @@ from src.silver.run_silver import run_silver_processing  # noqa: E402
 overrides = {"env": "databricks", "catalog": dbutils.widgets.get("catalog"), "run_mode": dbutils.widgets.get("run_mode")}
 if dbutils.widgets.get("base_path"):
     overrides["base_path"] = dbutils.widgets.get("base_path")
+if dbutils.widgets.get("checkpoint_path"):
+    overrides["checkpoint_path"] = dbutils.widgets.get("checkpoint_path")
+if dbutils.widgets.get("quarantine_path"):
+    overrides["quarantine_path"] = dbutils.widgets.get("quarantine_path")
 config = get_config(**overrides)
 print(config.as_dict())
 

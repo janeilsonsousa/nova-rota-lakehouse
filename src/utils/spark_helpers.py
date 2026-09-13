@@ -1,22 +1,26 @@
 """Helpers genéricos de construção de DataFrame.
 
-``build_literal_df`` existe por causa de uma incompatibilidade específica de
-ambiente (ver ADR "Execução local no Windows" em ``docs/decisions.md``):
-``spark.createDataFrame(<lista python>, schema)`` deveria ser a forma normal
-de materializar um punhado de linhas geradas no driver (ex.: registros de
-controle de ingestão), mas em execução local no Windows com PySpark 3.5.1 +
-Python 3.12 esse caminho (``SparkContext.parallelize`` + worker Python que
-desserializa os dados "pickled") derruba o worker Python com um
-``EOFException`` pouco descritivo.
+``build_literal_df`` existe por causa de DUAS incompatibilidades de
+ambiente diferentes que, juntas, eliminam qualquer caminho baseado em RDD
+ou em coleção Python bruta (ver ADRs em ``docs/decisions.md``):
 
-A alternativa abaixo constrói cada linha via ``spark.range(1).select(lit(...))``
-— uma operação 100% nativa da JVM/Catalyst que nunca aciona um worker
-Python — e une as linhas com ``unionByName``. Isso é equivalente em
-resultado ao ``createDataFrame`` para os volumes pequenos em que é usado
-(metadados de controle, poucas linhas por execução) e é totalmente portátil:
-em Databricks o ``createDataFrame`` normal funcionaria sem problema, então
-esta função é apenas uma camada de segurança que funciona nos dois
-ambientes.
+1. Local, Windows (dev/teste): ``spark.createDataFrame(<lista python>, schema)``
+   deveria ser a forma normal de materializar um punhado de linhas geradas
+   no driver, mas com PySpark 3.5.1 + Python 3.12 esse caminho
+   (``SparkContext.parallelize`` + worker Python desserializando dados
+   "pickled") derruba o worker Python com um ``EOFException`` pouco
+   descritivo.
+2. Databricks Serverless: acesso direto a ``spark.sparkContext``/RDD é
+   bloqueado por design (``JVM_ATTRIBUTE_NOT_SUPPORTED`` — isolamento de
+   compute compartilhado), então a saída óbvia para o problema 1
+   (``spark.sparkContext.emptyRDD()``) quebra especificamente ali.
+
+A solução usa só a API de alto nível do DataFrame — nunca RDD, nunca uma
+coleção Python é enviada ao Spark: cada linha vira
+``spark.range(1).select(lit(...))`` (uma operação 100% JVM/Catalyst) unida
+via ``unionByName``; o caso vazio vira ``spark.range(0).select(lit(...))``
+(mesmo princípio, zero linhas). Funciona sem alteração em execução local
+Windows, em Databricks com cluster clássico e em Databricks Serverless.
 """
 
 from __future__ import annotations
@@ -31,7 +35,8 @@ from pyspark.sql.types import StructType
 
 def build_literal_df(spark: SparkSession, rows: list[dict[str, Any]], schema: StructType) -> DataFrame:
     if not rows:
-        return spark.createDataFrame(spark.sparkContext.emptyRDD(), schema)
+        empty_cols = [F.lit(None).cast(field.dataType).alias(field.name) for field in schema.fields]
+        return spark.range(0).select(*empty_cols)
 
     def _row_df(row: dict[str, Any]) -> DataFrame:
         cols = [F.lit(row[field.name]).cast(field.dataType).alias(field.name) for field in schema.fields]
