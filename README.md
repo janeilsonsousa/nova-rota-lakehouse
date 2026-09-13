@@ -93,20 +93,40 @@ python -m pytest -q                     # tudo
 
 ## Executando em Databricks (evidência real)
 
+A evidência em `docs/evidencias/` foi gerada rodando de ponta a ponta num
+workspace Databricks **Free Edition**, em compute **Serverless** (sem
+provisionar/gerenciar cluster — é a opção sem custo disponível nesse tipo
+de conta). Isso exigiu 3 ajustes de compatibilidade em relação a um
+cluster clássico, documentados em ADR-09 (`docs/decisions.md`): sem acesso
+direto a RDD/`SparkContext`, sem `.persist()`, e storage físico das
+tabelas via **Unity Catalog Volume** em vez do Workspace filesystem
+(que é somente leitura para dado em Serverless).
+
 1. Crie/abra um workspace Databricks (Free Edition serve:
    https://www.databricks.com/learn/free-edition).
 2. Suba este repositório via **Repos** (Git) ou importe os notebooks de
-   `notebooks/` diretamente.
-3. Crie um cluster (ou use um SQL Warehouse para as queries de
-   `sql/advanced_queries.sql`) com Databricks Runtime 14.x/15.x LTS
-   (Spark 3.5.x — mesma versão usada em dev local).
-4. Rode, em ordem, os notebooks de `notebooks/` (cada um documenta o que
-   demonstra) **ou** direto via terminal do cluster:
+   `notebooks/` diretamente (ex.: via API `workspace/import`).
+3. Rode, em ordem, os notebooks de `notebooks/` (cada um documenta em
+   Markdown o que demonstra):
+   - `00_setup_ambiente` — cria o catálogo/schemas Unity Catalog e o
+     Volume usado como storage físico das camadas.
+   - `01_bronze_ingestion` → `02_silver_processing` →
+     `03_gold_data_products` → `04_sql_analysis`.
+   Em compute Serverless, os notebooks já rodam sem criar/selecionar
+   cluster; se preferir um cluster clássico com Databricks Runtime
+   14.x/15.x LTS (Spark 3.5.x), o mesmo código funciona sem alteração —
+   os 3 ajustes do ADR-09 só evitam APIs que o Serverless bloqueia.
+4. Alternativa via terminal do cluster/notebook:
    ```
    %pip install -r requirements.txt   # normalmente desnecessário: runtime já traz pyspark/delta
    python -m src.run_pipeline --env databricks --catalog nova_rota
    ```
-5. Capturas de tela / logs de execução ficam em `docs/evidencias/` (ver
+5. Ao final de cada camada, o pipeline tenta registrar as tabelas no
+   Unity Catalog por nome (`nova_rota.<camada>.<tabela>`) — ver ADR-09
+   para o mecanismo (`CREATE TABLE ... LOCATION` com fallback para CTAS) e
+   `docs/evidencias/databricks_07_catalog_gold_arvore_completa.jpg` para a
+   árvore completa das 13 tabelas registradas.
+6. Capturas de tela / logs de execução ficam em `docs/evidencias/` (ver
    `docs/evidencias/README.md` para o índice).
 
 ## Premissas e limitações

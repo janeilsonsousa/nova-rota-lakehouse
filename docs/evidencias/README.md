@@ -12,6 +12,9 @@ notebooks executados célula a célula, e resultados de testes.
 | `pytest_full_suite.log` | Saída da suíte completa de testes (28 testes: 14 unitários + 14 de transformação). |
 | `databricks_03_gold_volumetria.jpg` | Captura do notebook `03_gold_data_products` executado no Databricks (Serverless), mostrando as 8 tabelas Ouro criadas com sucesso. |
 | `databricks_04_sql_ntile_percentrank.jpg` | Captura do notebook `04_sql_analysis` executado no Databricks, resultado da query de segmentação por NTILE/PERCENT_RANK. |
+| `databricks_05_catalog_bronze.jpg` | Catalog Explorer — schema `nova_rota.bronze` com as 6 tabelas Bronze registradas (uma por fonte de CDC/evento). |
+| `databricks_06_catalog_silver.jpg` | Catalog Explorer — schema `nova_rota.silver` com as 6 dimensões/fatos Prata (SCD2) registradas. |
+| `databricks_07_catalog_gold_arvore_completa.jpg` | Catalog Explorer com a árvore do catálogo `nova_rota` expandida (bronze/silver/gold), evidenciando as 13 tabelas registradas nas três camadas do medallion de uma só vez. |
 
 ## Como reproduzir
 

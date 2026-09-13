@@ -207,4 +207,4 @@ Ver ADR-01 em `docs/decisions.md` para a justificativa completa.
 | MERGE incremental idempotente em toda a Prata/Ouro | — | Mesma abordagem |
 | Quarentena com motivo por regra | Alertas automatizados por taxa de quarentena | Job de observabilidade dedicado |
 | Testes de transformação com massa pequena | Testes de carga/volume | Suite de performance em ambiente de staging |
-| Unity Catalog desenhado | Provisionamento real (exige admin de conta) | Terraform/script de setup do catálogo |
+| Unity Catalog provisionado (catálogo `nova_rota`, schemas e as 13 tabelas das 3 camadas registradas — ver ADR-09 e `docs/evidencias/`) | Permissões granulares por papel (bronze/silver/gold) | Workspace corporativo com admin de conta + Terraform/script de setup |
