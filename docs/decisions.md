@@ -200,6 +200,53 @@ validação local.
 
 ---
 
+## ADR-09 — Compatibilidade com Databricks Serverless e registro no Unity Catalog
+
+A execução real de evidência (ver `docs/evidencias/`) rodou em compute
+**Serverless** (não cluster clássico) de um workspace Free Edition — a
+opção sem custo/gestão de infraestrutura disponível para este desafio.
+Serverless tem isolamento de compute compartilhado mais restrito que um
+cluster clássico, o que exigiu três ajustes (nenhum de lógica de negócio):
+
+1. **Sem acesso a `SparkContext`/RDD** (`JVM_ATTRIBUTE_NOT_SUPPORTED`):
+   qualquer `spark.sparkContext.emptyRDD()` ou uso direto de RDD é
+   bloqueado. Resolvido com `build_literal_df`
+   (`src/utils/spark_helpers.py`, mesmo helper do ADR-08) — o caso vazio
+   também é construído via `spark.range(0).select(lit(...))`, 100%
+   DataFrame API.
+2. **`.persist()`/`.unpersist()` não suportado**
+   (`NOT_SUPPORTED_WITH_SERVERLESS: PERSIST TABLE`): removido do código —
+   é otimização pura, sem impacto de corretude para o volume de dados
+   deste desafio.
+3. **Workspace filesystem somente leitura para dado**: escrever em
+   `/Workspace/...` retorna `Read-only file system`. O storage físico das
+   tabelas Delta passou a ser um **Volume do Unity Catalog**
+   (`/Volumes/nova_rota/bronze/storage/...`, criado pelo notebook
+   `00_setup_ambiente`), não o Workspace.
+
+**Registro das tabelas no catálogo (`src/utils/catalog.py`)**: o pipeline
+lê/escreve todas as camadas por **path físico** (portável entre execução
+local sem metastore e Databricks) e, ao final de cada camada, tenta
+registrar cada tabela no Unity Catalog por nome
+(`nova_rota.<camada>.<tabela>`) para consulta via `SELECT` e Catalog
+Explorer. Um Volume não é aceito como `LOCATION` de tabela registrada
+(`INVALID_PARAMETER_VALUE: Missing cloud file system scheme` — exigiria um
+External Location com storage credential, fora do escopo de uma conta
+gratuita), então a função tenta primeiro `CREATE TABLE ... LOCATION` e, ao
+falhar por esse motivo específico, cai para
+`CREATE OR REPLACE TABLE ... AS SELECT * FROM delta.\`{path}\`` (managed
+table, com cópia física do dado — desprezível no volume deste desafio;
+em produção, com External Location configurado, a versão por `LOCATION`
+seria preferível por evitar a cópia). O registro é *best-effort*: uma
+falha nele não derruba o pipeline, porque a leitura/escrita por path já é
+suficiente para o funcionamento — ver docstring de `catalog.py` para o
+detalhe completo. Evidência das 13 tabelas registradas (6 Bronze + 6 Prata
++ 1 Ouro) em `docs/evidencias/databricks_05_catalog_bronze.jpg`,
+`databricks_06_catalog_silver.jpg` e
+`databricks_07_catalog_gold_arvore_completa.jpg`.
+
+---
+
 ## O que ficou como desenho (não implementado) e por quê
 
 - **Auto Loader real / Structured Streaming**: ver ADR-01 — desenho
@@ -213,6 +260,10 @@ validação local.
   código de qualidade/SCD2 não trata delete explícito — em produção,
   adicionar tratamento de `operacao = 'D'` fecharia a versão vigente
   (`flag_vigente=false`) sem abrir uma nova.
-- **Unity Catalog / permissões reais**: desenhado em
-  `docs/architecture.md` (seção de governança), não provisionado (exige
-  workspace Databricks com admin de conta).
+- **Unity Catalog com permissões granulares por camada**: o catálogo
+  `nova_rota` e as 13 tabelas das 3 camadas estão provisionados e
+  registrados (ver ADR-09) numa conta pessoal de trial — o que não está
+  provisionado é a segregação de permissões por papel (ex.: Data Science
+  com `SELECT` só em Ouro, engenharia com `MODIFY` em Bronze/Prata), que
+  exige um workspace corporativo com admin de conta. Desenho completo em
+  `docs/architecture.md` (seção de governança).
