@@ -29,9 +29,10 @@ def join_ponto_no_tempo(
     simples por chave. Colunas trazidas da dimensão são prefixadas com
     ``prefixo`` para evitar colisão de nomes.
     """
+    excluidas = (chave, "dt_inicio_vigencia", "dt_fim_vigencia")
     dim = dimensao_scd2.select(
         F.col(chave).alias(f"_{chave}"),
-        *[F.col(c).alias(f"{prefixo}{c}") for c in dimensao_scd2.columns if c not in (chave, "dt_inicio_vigencia", "dt_fim_vigencia")],
+        *[F.col(c).alias(f"{prefixo}{c}") for c in dimensao_scd2.columns if c not in excluidas],
         F.col("dt_inicio_vigencia").alias("_dt_inicio"),
         F.col("dt_fim_vigencia").alias("_dt_fim"),
     )

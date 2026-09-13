@@ -13,7 +13,13 @@ from src.silver.contas import process_contas
 from src.silver.estornos import process_estornos
 from src.silver.eventos_risco import process_eventos_risco
 from src.silver.transacoes import process_transacoes
+from src.utils.catalog import register_known_tables
 from src.utils.logging_utils import get_logger
+
+SILVER_TABLES = [
+    "silver_clientes", "silver_contas", "silver_cartoes",
+    "silver_transacoes", "silver_eventos_risco", "silver_estornos",
+]
 
 
 def run_silver_processing(spark: SparkSession, config: PipelineConfig) -> list[dict]:
@@ -29,5 +35,6 @@ def run_silver_processing(spark: SparkSession, config: PipelineConfig) -> list[d
         process_estornos(spark, config),
     ]
 
+    register_known_tables(spark, config, "silver", SILVER_TABLES)
     logger.info("processamento silver finalizado", resultados=results)
     return results

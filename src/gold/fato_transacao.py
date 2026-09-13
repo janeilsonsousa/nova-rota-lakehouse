@@ -82,8 +82,11 @@ def build_gold_fato_transacao(spark: SparkSession, config: PipelineConfig) -> di
         F.count("*").alias("qtd_eventos_risco"),
         F.max(severidade_rank_col("severidade")).alias("_rank_max"),
     )
-    rank_to_label = F.create_map(*[F.lit(x) for pair in {1: "BAIXA", 2: "MEDIA", 3: "ALTA", 4: "CRITICA"}.items() for x in pair])
-    eventos_agg = eventos_agg.withColumn("severidade_maxima_risco", rank_to_label[F.col("_rank_max")]).drop("_rank_max")
+    rank_label_pairs = {1: "BAIXA", 2: "MEDIA", 3: "ALTA", 4: "CRITICA"}.items()
+    rank_to_label = F.create_map(*[F.lit(x) for pair in rank_label_pairs for x in pair])
+    eventos_agg = eventos_agg.withColumn(
+        "severidade_maxima_risco", rank_to_label[F.col("_rank_max")]
+    ).drop("_rank_max")
 
     enriched = (
         with_cliente.join(estornos_agg, "id_transacao", "left")

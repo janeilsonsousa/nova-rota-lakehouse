@@ -79,8 +79,11 @@ def build_gold_indicadores_risco(spark: SparkSession, config: PipelineConfig) ->
             F.create_map(*[F.lit(x) for pair in _SEVERIDADE_ORDEM.items() for x in pair])[F.col("severidade")]
         ).alias("_rank_max"),
     )
-    rank_to_label = F.create_map(*[F.lit(x) for pair in {v: k for k, v in _SEVERIDADE_ORDEM.items()}.items() for x in pair])
-    eventos_agg = eventos_agg.withColumn("severidade_maxima_mes", rank_to_label[F.col("_rank_max")]).drop("_rank_max")
+    label_pairs = {v: k for k, v in _SEVERIDADE_ORDEM.items()}.items()
+    rank_to_label = F.create_map(*[F.lit(x) for pair in label_pairs for x in pair])
+    eventos_agg = eventos_agg.withColumn(
+        "severidade_maxima_mes", rank_to_label[F.col("_rank_max")]
+    ).drop("_rank_max")
 
     result = base.join(eventos_agg, ["id_cliente", "ano_mes"], "left").fillna(
         0, subset=["qtd_eventos_risco", "qtd_fraude", "qtd_chargeback", "qtd_suspeita"]

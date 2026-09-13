@@ -36,7 +36,7 @@ class QualityResult:
 
 def apply_quality_gate(
     df: DataFrame,
-    checks: list[tuple[str, "F.Column"]],
+    checks: list[tuple[str, F.Column]],
     id_cols: list[str] | None = None,
 ) -> QualityResult:
     """Aplica um conjunto de regras (motivo, condição_de_validade).
@@ -61,7 +61,9 @@ def apply_quality_gate(
     valid_count = valid.count()
     quarantine_count = quarantined.count()
 
-    return QualityResult(valid=valid, quarantined=quarantined, quarantine_count=quarantine_count, valid_count=valid_count)
+    return QualityResult(
+        valid=valid, quarantined=quarantined, quarantine_count=quarantine_count, valid_count=valid_count
+    )
 
 
 def write_quarantine(

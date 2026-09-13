@@ -12,14 +12,14 @@ from __future__ import annotations
 import json
 import logging
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 
 class _JsonFormatter(logging.Formatter):
     def format(self, record: logging.LogRecord) -> str:
         payload: dict[str, Any] = {
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "level": record.levelname,
             "logger": record.name,
             "message": record.getMessage(),
@@ -32,7 +32,7 @@ class _JsonFormatter(logging.Formatter):
         return json.dumps(payload, ensure_ascii=False, default=str)
 
 
-def get_logger(name: str, batch_id: str | None = None) -> "_ContextLogger":
+def get_logger(name: str, batch_id: str | None = None) -> _ContextLogger:
     logger = logging.getLogger(name)
     if not logger.handlers:
         handler = logging.StreamHandler(sys.stdout)
@@ -50,7 +50,7 @@ class _ContextLogger:
         self._logger = logger
         self._context = context
 
-    def bind(self, **kwargs: Any) -> "_ContextLogger":
+    def bind(self, **kwargs: Any) -> _ContextLogger:
         return _ContextLogger(self._logger, {**self._context, **kwargs})
 
     def _log(self, level: int, message: str, **kwargs: Any) -> None:

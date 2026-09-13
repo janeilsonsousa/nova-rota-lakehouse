@@ -13,7 +13,13 @@ from src.gold.dimensions import build_gold_dimensions
 from src.gold.fato_transacao import build_gold_fato_transacao
 from src.gold.features_cliente import build_gold_features_cliente
 from src.gold.indicadores_risco import build_gold_indicadores_risco
+from src.utils.catalog import register_known_tables
 from src.utils.logging_utils import get_logger
+
+GOLD_TABLES = [
+    "gold_fato_transacao", "gold_dim_cliente", "gold_dim_conta", "gold_dim_cartao",
+    "gold_dim_estabelecimento", "gold_cliente_mes", "gold_indicadores_risco", "gold_features_cliente",
+]
 
 
 def run_gold_processing(spark: SparkSession, config: PipelineConfig) -> dict:
@@ -33,5 +39,6 @@ def run_gold_processing(spark: SparkSession, config: PipelineConfig) -> dict:
         "gold_indicadores_risco": indicadores_result,
         "gold_features_cliente": features_result,
     }
+    register_known_tables(spark, config, "gold", GOLD_TABLES)
     logger.info("processamento gold finalizado", resultados=results)
     return results

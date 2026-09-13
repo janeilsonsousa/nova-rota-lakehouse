@@ -21,6 +21,7 @@ from pyspark.sql import functions as F
 
 from src.config.settings import PipelineConfig
 from src.ingestion.control import PendingFile, list_pending_files, register_processed_files
+from src.utils.catalog import register_known_tables
 from src.utils.logging_utils import get_logger
 
 
@@ -153,5 +154,6 @@ def run_bronze_ingestion(spark: SparkSession, config: PipelineConfig) -> list[di
     logger = get_logger("ingestion.bronze", batch_id=config.batch_id)
     logger.info("iniciando ingestão bronze", run_mode=config.run_mode)
     results = [ingest_source(spark, config, key) for key in SOURCES]
+    register_known_tables(spark, config, "bronze", [s.bronze_table for s in SOURCES.values()])
     logger.info("ingestão bronze finalizada", resultados=results)
     return results
