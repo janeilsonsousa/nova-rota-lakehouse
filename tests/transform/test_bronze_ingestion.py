@@ -33,7 +33,9 @@ def test_ingest_source_carrega_linhas_e_metadados(spark, tmp_config):
 
     df = spark.read.format("delta").load(tmp_config.table_path("bronze", "bronze_clientes_cdc"))
     assert df.count() == 2
-    expected_meta_cols = {"arquivo_origem", "data_ingestao", "timestamp_ingestao", "batch_id", "hash_linha", "schema_version"}
+    expected_meta_cols = {
+        "arquivo_origem", "data_ingestao", "timestamp_ingestao", "batch_id", "hash_linha", "schema_version",
+    }
     assert expected_meta_cols.issubset(set(df.columns))
     assert {r["batch_id"] for r in df.select("batch_id").collect()} == {tmp_config.batch_id}
     assert {r["schema_version"] for r in df.select("schema_version").collect()} == {1}

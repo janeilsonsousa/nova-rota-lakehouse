@@ -98,7 +98,12 @@ def build_gold_cliente_mes(spark: SparkSession, config: PipelineConfig) -> dict:
         "variacao_valor_liquido_pct",
         F.when(
             (F.col("valor_liquido_mes_anterior").isNotNull()) & (F.col("valor_liquido_mes_anterior") != 0),
-            F.round((F.col("valor_liquido") - F.col("valor_liquido_mes_anterior")) / F.col("valor_liquido_mes_anterior") * 100, 2),
+            F.round(
+                (F.col("valor_liquido") - F.col("valor_liquido_mes_anterior"))
+                / F.col("valor_liquido_mes_anterior")
+                * 100,
+                2,
+            ),
         ),
     )
 

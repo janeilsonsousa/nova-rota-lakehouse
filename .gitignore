@@ -32,9 +32,6 @@ Thumbs.db
 .vscode/
 .idea/
 
-# Evidence artifacts that are large (keep small ones tracked)
-docs/evidencias/*.log
-
 # Env / secrets
 .env
 *.env
