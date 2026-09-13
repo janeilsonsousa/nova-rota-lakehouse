@@ -75,9 +75,27 @@ def _recompute_timeline(
     changed_only = with_change_flag.filter(F.col("_mudou")).drop("_hash_anterior", "_mudou")
 
     final_window = Window.partitionBy(business_key).orderBy(F.col(effective_date_col))
+    date_type = combined.schema[effective_date_col].dataType
+    # A primeira versão conhecida de uma chave recebe dt_inicio_vigencia num
+    # sentinela "desde sempre", não o data_atualizacao do evento de CDC que a
+    # trouxe. Por quê: data_atualizacao é a data em que o sistema de origem
+    # *registrou* aquele estado, não necessariamente a data em que ele
+    # passou a ser verdade — um cliente/conta/cartão pode já existir e ter
+    # transações antes do primeiro snapshot de CDC que o sistema nos enviou.
+    # Sem esse sentinela, qualquer transação anterior ao primeiro
+    # data_atualizacao ficaria sem correspondência no join ponto-no-tempo da
+    # Ouro (bug real encontrado e corrigido durante o desenvolvimento — ver
+    # docs/decisions.md). Usamos 1970-01-02 (não 1900-01-01): timestamp
+    # pré-epoch quebra datetime.fromtimestamp() no Windows ao fazer collect()
+    # em execução/teste local — 1970 já é "infinitamente antigo" para os
+    # dados deste domínio (que começam em 2024+) e funciona nos dois SOs.
+    sentinel = F.lit("1970-01-02T00:00:00").cast(date_type)
     timeline = (
         changed_only.withColumn("versao", F.row_number().over(final_window))
-        .withColumn("dt_inicio_vigencia", F.col(effective_date_col))
+        .withColumn(
+            "dt_inicio_vigencia",
+            F.when(F.col("versao") == 1, sentinel).otherwise(F.col(effective_date_col)),
+        )
         .withColumn("dt_fim_vigencia", F.lead(F.col(effective_date_col)).over(final_window))
         .withColumn("flag_vigente", F.col("dt_fim_vigencia").isNull())
     )
