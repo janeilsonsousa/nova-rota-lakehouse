@@ -32,24 +32,46 @@ def _ensure_windows_hadoop_home() -> None:
         os.environ["PATH"] = str(candidate / "bin") + os.pathsep + os.environ.get("PATH", "")
 
 
+def _ensure_worker_python() -> None:
+    """Garante que os workers do PySpark usem o mesmo interpretador do
+    driver (o Python do venv), em vez de resolver ``python`` pelo PATH do
+    SO — no Windows isso pode acidentalmente pegar o alias da Microsoft
+    Store (WindowsApps) e quebrar a serialização com um erro de socket
+    difícil de diagnosticar (``Connection reset``).
+    """
+    import sys
+
+    os.environ.setdefault("PYSPARK_PYTHON", sys.executable)
+    os.environ.setdefault("PYSPARK_DRIVER_PYTHON", sys.executable)
+
+
 def get_spark(app_name: str = "nova_rota_lakehouse") -> SparkSession:
     active = SparkSession.getActiveSession()
     if active is not None:
         return active
 
     _ensure_windows_hadoop_home()
+    _ensure_worker_python()
 
     from delta import configure_spark_with_delta_pip
 
     builder = (
         SparkSession.builder.appName(app_name)
-        .master("local[*]")
+        # local[1]: no PySpark 3.5.x + Python 3.12 no Windows, partições
+        # vazias derrubam o worker Python com um EOFException pouco
+        # descritivo (bug de ambiente, não do pipeline — ver docs/decisions.md,
+        # ADR "Execução local no Windows"). Com 1 core e minPartitionNum=1
+        # eliminamos partições vazias no dev local; em Databricks (cluster
+        # real, Linux) essa restrição não existe e o paralelismo é normal.
+        .master("local[1]")
         .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
         .config(
             "spark.sql.catalog.spark_catalog",
             "org.apache.spark.sql.delta.catalog.DeltaCatalog",
         )
-        .config("spark.sql.shuffle.partitions", "4")
+        .config("spark.sql.shuffle.partitions", "1")
+        .config("spark.default.parallelism", "1")
+        .config("spark.sql.files.minPartitionNum", "1")
         .config("spark.ui.showConsoleProgress", "false")
         .config("spark.driver.memory", "2g")
     )
