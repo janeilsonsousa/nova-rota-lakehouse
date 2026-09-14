@@ -121,8 +121,3 @@ def apply_scd2(
 
 def read_scd2_current(spark: SparkSession, table_path: str) -> DataFrame:
     return spark.read.format("delta").load(table_path).filter(F.col("flag_vigente"))
-
-
-def read_scd2_as_of(spark: SparkSession, table_path: str, business_key: str, as_of_col: str) -> DataFrame:
-    # retorna tudo, pra fazer join ponto-no-tempo em dt_inicio/fim_vigencia
-    return spark.read.format("delta").load(table_path)

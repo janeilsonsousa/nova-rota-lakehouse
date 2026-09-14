@@ -38,9 +38,9 @@ class PipelineConfig:
 
     def __post_init__(self) -> None:
         if self.run_mode not in {"incremental", "full"}:
-            raise ValueError(f"run_mode inválido: {self.run_mode!r} (use 'incremental' ou 'full')")
+            raise ValueError(f"run_mode tem que ser incremental ou full, veio {self.run_mode}")
         if self.env not in {"local", "databricks"}:
-            raise ValueError(f"env inválido: {self.env!r} (use 'local' ou 'databricks')")
+            raise ValueError(f"env tem que ser local ou databricks, veio {self.env}")
 
     def table_fqn(self, layer: str, table: str) -> str:
         # catalogo.schema.tabela no Databricks, schema.tabela local
@@ -60,7 +60,7 @@ class PipelineConfig:
             "gold": self.gold_schema,
         }
         if layer not in mapping:
-            raise ValueError(f"camada inválida: {layer!r} (use bronze/silver/gold)")
+            raise ValueError(f"camada {layer} nao existe, tem que ser bronze, silver ou gold")
         return mapping[layer]
 
     @property

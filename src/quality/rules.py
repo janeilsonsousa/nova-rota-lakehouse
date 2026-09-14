@@ -29,7 +29,6 @@ class QualityResult:
 def apply_quality_gate(
     df: DataFrame,
     checks: list[tuple[str, F.Column]],
-    id_cols: list[str] | None = None,
 ) -> QualityResult:
     fail_flags = [F.when(~cond, F.lit(motivo)) for motivo, cond in checks]
     with_flags = df.withColumn("_motivos", F.array_compact(F.array(*fail_flags)))

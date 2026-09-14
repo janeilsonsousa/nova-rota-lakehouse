@@ -49,10 +49,7 @@ def process_transacoes(spark: SparkSession, config: PipelineConfig) -> dict:
         cartoes_validos.withColumn("_cartao_existe", F.lit(True)), on="id_cartao", how="left"
     )
 
-    # device_id/ip_origem só existem a partir do arquivo schema_v2; em
-    # lotes antigos (schema_version=1) essas colunas não existem no bronze
-    # após o unionByName — garantimos que existam aqui (NULL) para o schema
-    # final da Prata ser estável independente de quais arquivos já chegaram.
+    # device_id/ip_origem só existem a partir do schema_v2, cria como NULL se faltar
     if "device_id" not in bronze_com_flag_cartao.columns:
         bronze_com_flag_cartao = bronze_com_flag_cartao.withColumn("device_id", F.lit(None).cast("string"))
     if "ip_origem" not in bronze_com_flag_cartao.columns:
@@ -70,8 +67,7 @@ def process_transacoes(spark: SparkSession, config: PipelineConfig) -> dict:
 
     valid = gated.valid.drop("_cartao_existe").withColumn("dt_transacao", F.to_date("data_transacao"))
 
-    # Duplicidade dentro do MESMO lote (ex.: T0000206 repetida 2x no mesmo
-    # arquivo mensal): mantém a última linha por hash_linha determinístico.
+    # duplicata dentro do mesmo lote, mantém a última por hash_linha
     window = Window.partitionBy("id_transacao").orderBy(F.col("timestamp_ingestao").desc(), F.col("hash_linha"))
     deduped_in_batch = (
         valid.withColumn("_rn", F.row_number().over(window)).filter(F.col("_rn") == 1).drop("_rn")
@@ -88,11 +84,7 @@ def process_transacoes(spark: SparkSession, config: PipelineConfig) -> dict:
     else:
         target = DeltaTable.forPath(spark, target_path)
         gravados = staged.count()
-        # MERGE INTO idempotente: uma transação que já existe na Prata (mesmo
-        # id_transacao reenviado em outro lote) é atualizada em vez de
-        # duplicada; uma transação nova é inserida. Isso é o que garante que
-        # reprocessar o mesmo arquivo, ou receber a mesma id_transacao em
-        # dois lotes diferentes, nunca infle o valor agregado na Ouro.
+        # mesma id_transacao em lote diferente atualiza em vez de duplicar
         (
             target.alias("t")
             .merge(staged.alias("s"), "t.id_transacao = s.id_transacao")
