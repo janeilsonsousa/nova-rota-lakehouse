@@ -1,22 +1,14 @@
 # Databricks notebook source
 # MAGIC %md
-# MAGIC # 00 — Setup do ambiente
-# MAGIC
-# MAGIC Cria o catálogo/schemas Unity Catalog (ou o database local, se não
-# MAGIC houver Unity Catalog disponível no workspace) e valida que o
-# MAGIC repositório (`src/`) está importável.
-# MAGIC
-# MAGIC Rode este notebook uma vez por workspace, antes do `01_bronze_ingestion`.
+# MAGIC # 00 - Setup do ambiente
+# MAGIC Cria catalogo/schemas e valida que o src/ importa. Roda 1x por workspace antes do 01_bronze_ingestion.
 
 # COMMAND ----------
 
 import sys
 from pathlib import Path
 
-# Quando este notebook roda dentro de um Databricks Repo, a raiz do repo já
-# está no sys.path automaticamente; este bloco é só uma rede de segurança
-# para quando o notebook é executado a partir de outro lugar (ex. Workspace
-# Files fora de um Repo).
+# fallback pra quando o notebook roda fora de um Databricks Repo
 repo_root = Path.cwd()
 while not (repo_root / "src").exists() and repo_root != repo_root.parent:
     repo_root = repo_root.parent
@@ -30,12 +22,7 @@ CATALOG = "nova_rota"
 # COMMAND ----------
 
 # MAGIC %md ## Unity Catalog (se disponível)
-# MAGIC
-# MAGIC Se o workspace tiver Unity Catalog habilitado, cria o catálogo e os 3
-# MAGIC schemas. Se não (ex. workspace sem metastore UC), cai para databases
-# MAGIC no `hive_metastore`/`spark_catalog` — o pipeline funciona nos dois
-# MAGIC casos porque `PipelineConfig` só muda o *nome* qualificado da tabela,
-# MAGIC não a lógica.
+# MAGIC Cria o catálogo + 3 schemas. Sem UC, cai pra database no metastore default.
 
 # COMMAND ----------
 
@@ -57,16 +44,8 @@ print("Ambiente pronto. unity_catalog_disponivel =", unity_catalog_disponivel)
 
 # COMMAND ----------
 
-# MAGIC %md ## Volume de armazenamento (Delta path-based)
-# MAGIC
-# MAGIC O pipeline lê/escreve tabelas por **path físico**
-# MAGIC (`config.table_path(...)`), não por nome de catálogo — é o que torna o
-# MAGIC mesmo código portátil entre execução local e Databricks (ver
-# MAGIC `src/utils/catalog.py` para o registro complementar por nome).
-# MAGIC
-# MAGIC O filesystem do Workspace (onde este notebook/repo vive) é **somente
-# MAGIC leitura** para escrita de dados — por isso as tabelas Delta precisam
-# MAGIC morar em um Volume Unity Catalog (ou DBFS), nunca em `/Workspace/...`.
+# MAGIC %md ## Volume de armazenamento
+# MAGIC O pipeline grava por path físico, não por nome de catálogo. O Workspace é read-only pra dado, então usa um Volume UC (ou DBFS).
 
 # COMMAND ----------
 

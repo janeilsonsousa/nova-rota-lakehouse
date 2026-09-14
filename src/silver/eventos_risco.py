@@ -1,7 +1,3 @@
-"""Prata: eventos de risco (fraude, chargeback, suspeita) com integridade
-referencial contra transações e MERGE idempotente por ``id_evento``.
-"""
-
 from __future__ import annotations
 
 from delta.tables import DeltaTable

@@ -1,26 +1,8 @@
 # Databricks notebook source
 # MAGIC %md
-# MAGIC # 04 — Análises SQL avançadas
-# MAGIC
-# MAGIC Executa as consultas de `sql/advanced_queries.sql` (CTEs encadeadas,
-# MAGIC `ROW_NUMBER`, `LAG`/`LEAD`, `FIRST_VALUE`/`LAST_VALUE`,
-# MAGIC `NTILE`/`PERCENT_RANK`, detecção de anomalia, comparação cliente vs.
-# MAGIC histórico/cidade/segmento, `MERGE INTO`, `EXPLAIN FORMATTED`).
-# MAGIC
-# MAGIC **Nota de portabilidade**: `sql/advanced_queries.sql` (o artefato de
-# MAGIC entrega) usa nomes plenamente qualificados de catálogo
-# MAGIC (`nova_rota.gold.gold_fato_transacao`) — o padrão correto quando as
-# MAGIC tabelas são *managed tables* do Unity Catalog em produção. Neste
-# MAGIC ambiente de demonstração as tabelas são Delta **path-based** (gravadas
-# MAGIC em um Volume — ver notebook `00`), e Volumes não são aceitos como
-# MAGIC `LOCATION` de tabela registrada no catálogo (exigiria um External
-# MAGIC Location com storage credential, fora do escopo de uma conta pessoal
-# MAGIC gratuita). Por isso este notebook registra **temp views** apontando
-# MAGIC para os mesmos paths físicos e roda a *mesma lógica* das queries
-# MAGIC contra essas views — o SQL é idêntico, só a forma de apontar para a
-# MAGIC tabela muda.
-# MAGIC
-# MAGIC **Pré-requisito**: rodar `00`, `01`, `02` e `03` antes deste notebook.
+# MAGIC # 04 - Análises SQL avançadas
+# MAGIC Roda as queries de sql/advanced_queries.sql. Registra temp views por path físico
+# MAGIC porque Volume não aceita LOCATION de tabela registrada nessa conta. Roda 00-03 antes.
 
 # COMMAND ----------
 
@@ -182,12 +164,6 @@ for view_name, (layer, table) in tabelas.items():
 # COMMAND ----------
 
 # MAGIC %md ## 7) MERGE INTO — carga incremental idempotente em SQL
-# MAGIC
-# MAGIC Alvo e fonte referenciados por **path Delta direto**
-# MAGIC (`` delta.`/Volumes/...` ``) em vez de nome de catálogo — mesma razão
-# MAGIC de portabilidade explicada no topo do notebook; a sintaxe
-# MAGIC `MERGE INTO ... WHEN MATCHED ... WHEN NOT MATCHED` é idêntica à de
-# MAGIC produção.
 
 # COMMAND ----------
 

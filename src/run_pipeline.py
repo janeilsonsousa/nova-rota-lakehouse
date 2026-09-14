@@ -1,16 +1,6 @@
-"""Ponto de entrada único do pipeline: Bronze -> Prata -> Ouro.
-
-Uso local (dev/teste):
-    python -m src.run_pipeline --env local --run-mode incremental
-
-Uso em Databricks (job/workflow ou célula de notebook):
-    python -m src.run_pipeline --env databricks --catalog nova_rota \
-        --run-mode incremental --data-referencia 2026-04-10
-
-Todos os parâmetros de execução (ambiente, catálogo/schema, paths, data de
-referência, modo, batch_id) são explícitos via linha de comando — nada fica
-hardcoded no código, seguindo o requisito de parametrização profissional.
-"""
+# Entry point do pipeline: Bronze -> Prata -> Ouro.
+# python -m src.run_pipeline --env local --run-mode incremental
+# python -m src.run_pipeline --env databricks --catalog nova_rota --data-referencia 2026-04-10
 
 from __future__ import annotations
 
@@ -89,11 +79,6 @@ def main(argv: list[str] | None = None) -> int:
         if "gold" in layers:
             run_gold_processing(spark, config)
     except Exception:
-        # Falhas críticas nunca são mascaradas: o pipeline propaga a
-        # exceção (exit code != 0) para que o orquestrador (Databricks
-        # Workflows, Airflow, cron) marque a execução como falha e alerte —
-        # nunca "engolimos" um erro de camada para seguir em frente com
-        # dado incompleto.
         logger.exception("pipeline falhou")
         raise
     finally:

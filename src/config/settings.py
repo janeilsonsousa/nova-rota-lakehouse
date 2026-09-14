@@ -1,16 +1,4 @@
-"""Configuração central do pipeline NovaRota Lakehouse.
-
-Todos os parâmetros de execução (ambiente, catálogo/schema, paths, data de
-referência, modo de execução e batch_id) ficam centralizados aqui e podem ser
-sobrescritos por variáveis de ambiente (prefixo ``NOVAROTA_``) ou por
-argumentos explícitos passados a :func:`get_config`. Isso evita valores
-"hardcoded" espalhados pelos módulos de ingestion/silver/gold e permite rodar
-exatamente o mesmo código em:
-
-- Notebook Databricks (Unity Catalog: catálogo.schema.tabela);
-- Job/Workflow Databricks agendado, com parâmetros injetados;
-- Máquina local, para desenvolvimento e testes com PySpark + Delta OSS.
-"""
+# Config central do pipeline. Dá pra sobrescrever tudo via env var NOVAROTA_* ou kwargs em get_config().
 
 from __future__ import annotations
 
@@ -32,32 +20,7 @@ def _project_root() -> Path:
 
 @dataclass(frozen=True)
 class PipelineConfig:
-    """Parâmetros de execução do pipeline.
-
-    Attributes:
-        env: ``local`` (Spark local + Delta OSS, usado em dev/testes) ou
-            ``databricks`` (Unity Catalog, Volumes, cluster Databricks).
-        catalog: catálogo Unity Catalog (ignorado em ``env=local``).
-        bronze_schema / silver_schema / gold_schema: nomes de schema por
-            camada Medallion.
-        base_path: raiz de armazenamento das tabelas Delta gerenciadas
-            localmente (``env=local``) — em Databricks as tabelas usam o
-            Unity Catalog e este path não é necessário para dados, apenas
-            para checkpoints.
-        raw_path: diretório onde os arquivos de origem (CDC/CSV) chegam.
-        checkpoint_path: diretório de checkpoints/controle de ingestão.
-        quarantine_path: onde ficam os registros reprovados em qualidade.
-        data_referencia: data de referência do processamento (para
-            reprocessamento e tratamento de dados atrasados por partição de
-            negócio, não por data de ingestão).
-        run_mode: ``incremental`` (padrão, só processa o que é novo) ou
-            ``full`` (reprocessa o histórico inteiro — útil para backfill e
-            para corrigir uma regra de negócio retroativamente).
-        batch_id: identificador único da execução, propagado como metadado
-            em Bronze e usado em logs estruturados para rastreabilidade
-            ponta a ponta (ingestão -> silver -> gold).
-    """
-
+    # env: local (Spark local + Delta OSS) ou databricks (Unity Catalog)
     env: str = "local"
     catalog: str = "nova_rota"
     bronze_schema: str = "bronze"
@@ -79,27 +42,14 @@ class PipelineConfig:
         if self.env not in {"local", "databricks"}:
             raise ValueError(f"env inválido: {self.env!r} (use 'local' ou 'databricks')")
 
-    # ------------------------------------------------------------------
-    # Resolução de paths / nomes de tabela por camada
-    # ------------------------------------------------------------------
     def table_fqn(self, layer: str, table: str) -> str:
-        """Nome totalmente qualificado da tabela para o SQL do Spark.
-
-        Em Databricks com Unity Catalog: ``catalogo.schema.tabela``.
-        Em local: ``schema.tabela`` (database Spark gerenciado no
-        ``spark-warehouse`` local), o que evita colisão com o catálogo
-        ``hive_metastore``/``spark_catalog`` default.
-        """
+        # catalogo.schema.tabela no Databricks, schema.tabela local
         schema = self._schema_for(layer)
         if self.env == "databricks":
             return f"{self.catalog}.{schema}.{table}"
         return f"{schema}.{table}"
 
     def table_path(self, layer: str, table: str) -> str:
-        """Path físico da tabela Delta (usado em ``DeltaTable.forPath`` e no
-        ``CREATE TABLE ... LOCATION``). Em Databricks aponta para um Volume
-        Unity Catalog; localmente aponta para ``data/lakehouse``.
-        """
         schema = self._schema_for(layer)
         return f"{self.base_path}/{schema}/{table}"
 
@@ -136,11 +86,7 @@ class PipelineConfig:
 
 
 def get_config(**overrides) -> PipelineConfig:
-    """Monta a configuração a partir de env vars, com overrides explícitos.
-
-    Prioridade: ``overrides`` (kwargs) > variável de ambiente ``NOVAROTA_*``
-    > default do dataclass.
-    """
+    # prioridade: kwargs > env var NOVAROTA_* > default
     root = _project_root()
     env = overrides.pop("env", _env("ENV", "local"))
 

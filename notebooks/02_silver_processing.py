@@ -1,12 +1,7 @@
 # Databricks notebook source
 # MAGIC %md
-# MAGIC # 02 — Processamento Prata
-# MAGIC
-# MAGIC Qualidade de dados + quarentena, SCD2 (clientes/contas/cartões) e MERGE
-# MAGIC incremental (transações/eventos/estornos). Lógica em `src/silver/`,
-# MAGIC testada em `tests/transform/test_silver_*.py`.
-# MAGIC
-# MAGIC **Pré-requisito**: rodar `01_bronze_ingestion` antes deste notebook.
+# MAGIC # 02 - Processamento Prata
+# MAGIC Quality gate + quarentena, SCD2 e MERGE incremental. Roda 01_bronze_ingestion antes.
 
 # COMMAND ----------
 

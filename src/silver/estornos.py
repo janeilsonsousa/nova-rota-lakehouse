@@ -1,15 +1,4 @@
-"""Prata: estornos, com integridade referencial contra transações e MERGE
-idempotente por ``id_estorno``.
-
-Premissa de negócio (documentada também em docs/data_contracts.md): o
-layout mínimo do desafio não traz valor do estorno, então uma transação é
-tratada como **totalmente estornada** se tiver pelo menos um estorno válido
-vinculado — inclusive quando existem múltiplos registros de estorno para a
-mesma ``id_transacao`` (cenário parcial/complementar simulado na massa).
-Em produção, o campo ``valor_estorno`` ou ``percentual_estorno`` deveria
-existir para permitir estorno parcial real; sem ele, qualquer estorno
-zera o valor líquido da transação nos indicadores da Ouro.
-"""
+# sem valor_estorno no layout, qualquer estorno é tratado como total (não tem parcial)
 
 from __future__ import annotations
 
@@ -60,9 +49,7 @@ def process_estornos(spark: SparkSession, config: PipelineConfig) -> dict:
     logger.info("quality gate aplicado", validos=gated.valid_count, quarentena=gated.quarantine_count)
 
     valid = gated.valid.drop("_transacao_existe")
-    # Dedup só por id_estorno (chave do evento de estorno); múltiplos
-    # estornos para a MESMA id_transacao são um cenário de negócio válido
-    # (parcial/complementar), não uma duplicidade.
+    # dedup só por id_estorno, mais de um estorno pra mesma transação é válido
     window = Window.partitionBy("id_estorno").orderBy(F.col("timestamp_ingestao").desc(), F.col("hash_linha"))
     deduped = valid.withColumn("_rn", F.row_number().over(window)).filter(F.col("_rn") == 1).drop("_rn")
     staged = deduped.withColumn("timestamp_processamento_silver", F.current_timestamp()).select(*FINAL_COLS)

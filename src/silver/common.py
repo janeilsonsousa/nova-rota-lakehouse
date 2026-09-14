@@ -1,5 +1,3 @@
-"""Utilitários compartilhados pelos módulos de transformação da Prata."""
-
 from __future__ import annotations
 
 from delta.tables import DeltaTable
@@ -10,14 +8,7 @@ from src.config.settings import PipelineConfig
 
 
 def read_bronze_batch(spark: SparkSession, config: PipelineConfig, bronze_table: str) -> DataFrame:
-    """Lê a fatia de Bronze relevante para esta execução.
-
-    ``run_mode='incremental'`` (padrão): apenas as linhas com o
-    ``batch_id`` desta execução — a Prata processa exatamente o que a
-    Bronze acabou de ingerir no mesmo run do pipeline.
-    ``run_mode='full'``: toda a tabela Bronze, para backfill/reprocessamento
-    completo (ex.: corrigir uma regra de negócio retroativamente).
-    """
+    # incremental: só as linhas do batch_id atual. full: tabela inteira (backfill)
     path = config.table_path("bronze", bronze_table)
     if not DeltaTable.isDeltaTable(spark, path):
         raise RuntimeError(

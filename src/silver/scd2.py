@@ -1,42 +1,8 @@
-"""SCD Tipo 2 genérico para dimensões cadastrais (clientes, contas, cartões).
-
-Por que SCD2 (e não overwrite ou SCD1)
----------------------------------------
-O desafio pede explicitamente histórico de dimensões e que "dados cadastrais
-devem refletir a versão vigente na data da transação" — isso só é possível
-com histórico versionado (SCD2). Um SCD1 (sobrescreve o atributo mais
-recente) perderia a capacidade de saber, por exemplo, qual era o status de
-um cartão quando uma transação de 3 meses atrás aconteceu.
-
-Por que reconstrução de timeline (delete+insert via MERGE) em vez de
-MERGE linha-a-linha
-----------------------------------------------------------------------
-Os arquivos de CDC deste desafio não trazem "1 evento por execução" — um
-único arquivo (ex.: ``clientes_cdc.csv``) pode conter *múltiplas versões
-históricas da mesma chave* (o mesmo cliente atualizado 2x, cada linha com um
-``data_atualizacao`` diferente). Um MERGE INTO tradicional (1 UPDATE de
-fechamento + 1 INSERT de abertura por chave) falha com
-"multiple source rows matched" quando o lote de origem tem mais de uma linha
-por chave.
-
-A solução adotada: para cada chave afetada pelo lote, juntamos o histórico
-já existente na Prata (se houver) com as novas versões do lote, recalculamos
-a timeline inteira (``dt_inicio_vigencia``/``dt_fim_vigencia``/``flag_vigente``/
-``versao``) com funções de janela (LEAD/ROW_NUMBER) e substituímos o
-histórico daquela chave por inteiro via **MERGE INTO** (DELETE das versões
-antigas da chave + INSERT das versões recalculadas). Isso garante:
-
-- **Idempotência**: reexecutar o mesmo lote produz exatamente o mesmo
-  resultado (a timeline é recalculada do zero a cada vez a partir da união
-  histórico+novo, não incrementada por soma).
-- **Correção com dados fora de ordem**: uma versão "atrasada" (data de
-  atualização anterior à última versão já vigente) é reencaixada na posição
-  cronológica correta porque a timeline inteira é reordenada por
-  ``data_atualizacao``, não apenas apensada no fim.
-- **Robustez a reenvio sem mudança real**: versões consecutivas com o mesmo
-  hash de atributos (reenvio do mesmo CDC sem alteração de valor) são
-  colapsadas em uma única versão, evitando histórico "ruído".
-"""
+# SCD2 genérico pra clientes/contas/cartões. Um arquivo de CDC pode trazer mais
+# de uma versão da mesma chave, então em vez de MERGE linha-a-linha (quebra com
+# "multiple source rows matched"), recalcula a timeline inteira da chave afetada
+# e substitui por DELETE+INSERT via MERGE. Fica idempotente e lida com dado fora
+# de ordem de graça.
 
 from __future__ import annotations
 
@@ -76,19 +42,9 @@ def _recompute_timeline(
 
     final_window = Window.partitionBy(business_key).orderBy(F.col(effective_date_col))
     date_type = combined.schema[effective_date_col].dataType
-    # A primeira versão conhecida de uma chave recebe dt_inicio_vigencia num
-    # sentinela "desde sempre", não o data_atualizacao do evento de CDC que a
-    # trouxe. Por quê: data_atualizacao é a data em que o sistema de origem
-    # *registrou* aquele estado, não necessariamente a data em que ele
-    # passou a ser verdade — um cliente/conta/cartão pode já existir e ter
-    # transações antes do primeiro snapshot de CDC que o sistema nos enviou.
-    # Sem esse sentinela, qualquer transação anterior ao primeiro
-    # data_atualizacao ficaria sem correspondência no join ponto-no-tempo da
-    # Ouro (bug real encontrado e corrigido durante o desenvolvimento — ver
-    # docs/decisions.md). Usamos 1970-01-02 (não 1900-01-01): timestamp
-    # pré-epoch quebra datetime.fromtimestamp() no Windows ao fazer collect()
-    # em execução/teste local — 1970 já é "infinitamente antigo" para os
-    # dados deste domínio (que começam em 2024+) e funciona nos dois SOs.
+    # primeira versão de uma chave começa num sentinela "desde sempre", não no
+    # data_atualizacao do CDC, senão transação anterior ao 1o snapshot fica sem
+    # match no join ponto-no-tempo da Ouro. 1970-01-02 pra não quebrar no Windows.
     sentinel = F.lit("1970-01-02T00:00:00").cast(date_type)
     timeline = (
         changed_only.withColumn("versao", F.row_number().over(final_window))
@@ -111,10 +67,7 @@ def apply_scd2(
     attribute_cols: list[str],
     effective_date_col: str = "data_atualizacao",
 ) -> Scd2Result:
-    """Aplica (ou inicializa) o histórico SCD2 para as chaves presentes em
-    ``incoming``. ``incoming`` já deve ter passado pelo quality gate (só
-    contém registros válidos) e conter as colunas de lineage (LINEAGE_COLS).
-    """
+    # incoming já passou pelo quality gate e tem as colunas de lineage
     output_cols = [business_key, *attribute_cols, effective_date_col, *LINEAGE_COLS]
     incoming_slim = incoming.select(*output_cols)
 
@@ -167,12 +120,9 @@ def apply_scd2(
 
 
 def read_scd2_current(spark: SparkSession, table_path: str) -> DataFrame:
-    """Retorna apenas a versão vigente (flag_vigente=true) de cada chave."""
     return spark.read.format("delta").load(table_path).filter(F.col("flag_vigente"))
 
 
 def read_scd2_as_of(spark: SparkSession, table_path: str, business_key: str, as_of_col: str) -> DataFrame:
-    """Retorna o DataFrame completo (todas as versões) para permitir join
-    ponto-no-tempo em ``as_of_col BETWEEN dt_inicio_vigencia AND dt_fim_vigencia``.
-    """
+    # retorna tudo, pra fazer join ponto-no-tempo em dt_inicio/fim_vigencia
     return spark.read.format("delta").load(table_path)

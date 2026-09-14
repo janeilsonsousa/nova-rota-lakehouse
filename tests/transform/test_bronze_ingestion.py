@@ -1,10 +1,3 @@
-"""Testes de transformação da camada Bronze com massa pequena sintética.
-
-Cobrem os cenários de negócio exigidos pelo desafio: ingestão incremental
-idempotente, preservação do dado bruto e evolução de schema (colunas novas
-não descartam nem quebram a ingestão).
-"""
-
 from __future__ import annotations
 
 from pathlib import Path
@@ -86,18 +79,12 @@ def test_ingest_source_preserva_evolucao_de_schema(spark, tmp_config):
     versions = {r["id_transacao"]: r["schema_version"] for r in df.select("id_transacao", "schema_version").collect()}
     assert versions == {"T0001": 1, "T0002": 2}
 
-    # Linha antiga (schema v1) não tinha device_id/ip_origem: deve ficar NULL,
-    # nunca quebrar a leitura.
     linha_antiga = df.filter("id_transacao = 'T0001'").collect()[0]
     assert linha_antiga["device_id"] is None
 
 
 def test_ingest_source_preserva_duplicidade_bruta_entre_arquivos(spark, tmp_config):
-    """Bronze não deduplica — isso é responsabilidade da Silver (MERGE por
-    id_transacao). Uma mesma id_transacao pode legitimamente aparecer em
-    lotes diferentes (reprocessamento, atraso) e a Bronze deve preservar
-    ambas as ocorrências para auditoria.
-    """
+    # bronze não deduplica, isso é trabalho da silver
     raw_dir = Path(tmp_config.raw_path)
     transacoes_dir = raw_dir / "transacoes"
     transacoes_dir.mkdir(parents=True, exist_ok=True)

@@ -1,8 +1,6 @@
-# Contratos de dados — NovaRota Lakehouse
+# Contratos de dados
 
-Este documento descreve grão, chaves, colunas e regras de negócio de cada
-tabela do lakehouse. É a referência para quem for consumir a Ouro (BI,
-Data Science) ou estender a Prata (novas fontes).
+Grão, chaves e regras de negócio de cada tabela — referência pra quem consumir a Ouro ou mexer na Prata.
 
 ## Convenções gerais
 

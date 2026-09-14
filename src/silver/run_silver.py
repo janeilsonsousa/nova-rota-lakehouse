@@ -1,7 +1,3 @@
-"""Orquestra a camada Prata respeitando a ordem de dependência referencial:
-clientes -> contas -> cartões -> transações -> eventos_risco / estornos.
-"""
-
 from __future__ import annotations
 
 from pyspark.sql import SparkSession
@@ -26,6 +22,7 @@ def run_silver_processing(spark: SparkSession, config: PipelineConfig) -> list[d
     logger = get_logger("silver.run", batch_id=config.batch_id)
     logger.info("iniciando processamento silver", run_mode=config.run_mode)
 
+    # ordem importa: clientes -> contas -> cartoes -> transacoes -> eventos_risco/estornos
     results = [
         process_clientes(spark, config),
         process_contas(spark, config),

@@ -19,9 +19,6 @@ def spark():
 
 @pytest.fixture()
 def tmp_config(tmp_path: Path) -> PipelineConfig:
-    """Config isolada por teste: cada teste tem seu próprio diretório de
-    lakehouse/checkpoints/raw, evitando interferência entre casos.
-    """
     base_path = tmp_path / "lakehouse"
     raw_path = tmp_path / "raw"
     checkpoint_path = tmp_path / "checkpoints"
@@ -41,10 +38,7 @@ def tmp_config(tmp_path: Path) -> PipelineConfig:
 
 @pytest.fixture()
 def cleanup_delta_dirs():
-    """Alguns testes escrevem em data/lakehouse (fora do tmp_path) quando
-    exercitam o pipeline ponta a ponta com a massa real; este fixture
-    garante limpeza pós-teste.
-    """
+    # limpa data/lakehouse depois de testes que rodam o pipeline com a massa real
     created: list[str] = []
     yield created
     for path in created:

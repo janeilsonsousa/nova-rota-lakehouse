@@ -1,24 +1,5 @@
-"""Ouro: ``gold_fato_transacao`` — grão de 1 linha por ``id_transacao``.
-
-Granularidade, chaves e regras (ver também docs/data_contracts.md)
---------------------------------------------------------------------
-- **Grão**: 1 linha = 1 transação (``id_transacao``), já deduplicada pela
-  Prata (MERGE incremental) — nunca há mais de uma linha por id_transacao.
-- **Chaves**: ``id_transacao`` (PK), ``id_cartao``, ``id_conta_na_data``,
-  ``id_cliente_na_data`` — as duas últimas resolvidas por join ponto-no-tempo
-  (não é a conta/cliente atual do cartão, é quem era o dono na data da
-  transação).
-- **Filtros de negócio aplicados**: nenhum registro é excluído aqui — até
-  transações de cartão cancelado aparecem (com
-  ``flag_cartao_cancelado_no_momento``), porque o cancelamento pode ter
-  acontecido DEPOIS da transação. A exclusão de cartões cancelados de
-  métricas "futuras" acontece nos agregados (gold_cliente_mes), filtrando
-  pela vigência atual do cartão, não aqui na granularidade transacional.
-- **valor_liquido**: igual a ``valor`` quando não há estorno; 0 quando há
-  pelo menos 1 estorno vinculado (premissa documentada em
-  src/silver/estornos.py, já que o layout não traz valor parcial de
-  estorno).
-"""
+# gold_fato_transacao: 1 linha por id_transacao. Nada é filtrado aqui, nem cartão
+# cancelado (o filtro por vigência fica nos agregados, ex. gold_cliente_mes).
 
 from __future__ import annotations
 
@@ -61,10 +42,7 @@ def build_gold_fato_transacao(spark: SparkSession, config: PipelineConfig) -> di
         spark, config.table_path("silver", "silver_eventos_risco"), ["id_transacao", "severidade", "tipo_evento"]
     )
 
-    # Cada join ponto-no-tempo usa o nome de chave NATURAL da dimensão do
-    # lado direito (join_ponto_no_tempo busca essa coluna dentro da própria
-    # dimensão) — por isso renomeamos a FK recém-trazida para o nome que a
-    # próxima dimensão espera antes de encadear o próximo join.
+    # renomeia a FK trazida pra bater com o nome que o próximo join espera
     with_cartao = join_ponto_no_tempo(transacoes, cartoes, "id_cartao", "data_transacao", "cartao_")
 
     with_cartao = with_cartao.withColumnRenamed("cartao_id_conta", "id_conta")

@@ -1,14 +1,7 @@
 # Databricks notebook source
 # MAGIC %md
-# MAGIC # 01 — Ingestão Bronze
-# MAGIC
-# MAGIC Executa a ingestão incremental das 6 fontes (clientes, contas, cartões,
-# MAGIC transações, eventos de risco, estornos) a partir de
-# MAGIC `data/raw/nova_rota_input/` (ou de um Volume Unity Catalog, se
-# MAGIC `raw_path` apontar para lá).
-# MAGIC
-# MAGIC Este notebook é a camada de **execução/demonstração** — toda a lógica
-# MAGIC vive em `src/ingestion/`, testada em `tests/transform/test_bronze_ingestion.py`.
+# MAGIC # 01 - Ingestão Bronze
+# MAGIC Roda a ingestão incremental das 6 fontes. Lógica fica em src/ingestion/, isso aqui só executa.
 
 # COMMAND ----------
 

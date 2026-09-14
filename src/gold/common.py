@@ -1,12 +1,3 @@
-"""Utilitários compartilhados pela camada Ouro.
-
-O principal é ``join_ponto_no_tempo``: resolve, para cada linha de fato
-(com uma data de referência, normalmente ``data_transacao``), qual era a
-versão *vigente naquele instante* de uma dimensão SCD2 — não a versão atual.
-É a implementação direta do requisito "dados cadastrais devem refletir a
-versão vigente na data da transação".
-"""
-
 from __future__ import annotations
 
 from delta.tables import DeltaTable
@@ -26,11 +17,7 @@ def join_ponto_no_tempo(
     data_col: str,
     prefixo: str,
 ) -> DataFrame:
-    """Junta ``fatos`` (1 linha por evento, com ``data_col``) à versão da
-    dimensão SCD2 vigente em ``data_col`` — join por intervalo, não join
-    simples por chave. Colunas trazidas da dimensão são prefixadas com
-    ``prefixo`` para evitar colisão de nomes.
-    """
+    # join por intervalo: pega a versão da dimensão vigente na data_col, não a atual
     excluidas = (chave, "dt_inicio_vigencia", "dt_fim_vigencia")
     dim = dimensao_scd2.select(
         F.col(chave).alias(f"_{chave}"),
@@ -53,11 +40,7 @@ def severidade_rank_col(col_name: str) -> F.Column:
 
 
 def read_silver_or_empty(spark: SparkSession, path: str, columns: list[str]) -> DataFrame:
-    """Lê uma tabela Silver; se ela ainda não existe (ex.: nenhum arquivo de
-    eventos_risco/estornos chegou ainda para este ambiente), devolve um
-    DataFrame vazio com as colunas mínimas pedidas — os agregados da Ouro
-    tratam isso como "zero eventos/zero estornos" em vez de falhar.
-    """
+    # se a tabela ainda não existe, devolve vazio em vez de quebrar o agregado
     if DeltaTable.isDeltaTable(spark, path):
         return spark.read.format("delta").load(path)
     schema = StructType([StructField(c, StringType()) for c in columns])
@@ -71,13 +54,7 @@ def merge_by_composite_key(
     key_cols: list[str],
     final_cols: list[str],
 ) -> None:
-    """Substitui, por chave composta, o conteúdo de uma tabela agregada
-    (ex.: ``id_cliente + ano_mes``) via MERGE INTO (delete das linhas
-    antigas da chave + insert das recalculadas). Usado por agregados Ouro
-    onde a métrica não é somável incrementalmente (ticket médio, contagem
-    distinta) — o grupo inteiro precisa ser recalculado quando qualquer
-    membro dele muda.
-    """
+    # recalcula e substitui o grupo inteiro (chave composta) via delete+insert
     if not DeltaTable.isDeltaTable(spark, target_path):
         staged.write.format("delta").mode("overwrite").save(target_path)
         return

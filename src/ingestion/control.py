@@ -1,36 +1,6 @@
-"""Controle de ingestão incremental (equivalente funcional ao Auto Loader).
-
-Por que não usamos o Databricks Auto Loader (`cloudFiles`) nesta entrega
---------------------------------------------------------------------------
-O Auto Loader é a escolha certa em produção para ingestão incremental de
-arquivos em object storage na nuvem (S3/ADLS/GCS): ele usa *directory
-listing* incremental ou *file notification* (fila de eventos do storage) e
-mantém um checkpoint gerenciado (RocksDB) com o schema inferido e evoluído
-automaticamente. Ele não depende de um Volume/Workspace específico, mas sim
-de um bucket/container real na nuvem com permissões configuradas.
-
-Nesta entrega os arquivos de origem chegam em um diretório local (ou em um
-Volume Unity Catalog quando publicado em Databricks), sem um bucket próprio
-para configurar notificações de evento. Reproduzir o Auto Loader "de
-verdade" aqui seria: (a) não demonstrável de forma reproduzível por outra
-pessoa sem uma conta cloud própria, e (b) desnecessário para o volume de
-dados do desafio (poucos arquivos por lote).
-
-Por isso implementamos o mesmo *princípio* de idempotência e incrementalidade
-do Auto Loader com uma tabela de controle Delta (`_ingestion_control`):
-cada arquivo processado é registrado com um hash de conteúdo; uma nova
-execução só processa arquivos novos ou cujo conteúdo mudou (hash diferente).
-Isso é o que garante que a ingestão possa ser reexecutada (reprocessamento,
-backfill) sem duplicar dados em Bronze — a mesma propriedade de idempotência
-que o checkpoint do Auto Loader oferece.
-
-Em produção real na Databricks, a troca é mecânica: substituir
-`list_pending_files` + `register_processed_files` por
-`spark.readStream.format("cloudFiles").option("cloudFiles.format", "csv")
-.option("cloudFiles.schemaLocation", checkpoint_path).load(raw_path)` com
-`trigger(availableNow=True)` e um `writeStream` para a tabela Bronze — o
-restante do pipeline (metadados, escrita Delta) permanece idêntico.
-"""
+# Controle de ingestão incremental via tabela _ingestion_control (hash de arquivo).
+# Não usei Auto Loader porque aqui não tem bucket cloud com notificação de evento;
+# em produção dava pra trocar por spark.readStream.format("cloudFiles").
 
 from __future__ import annotations
 
@@ -71,10 +41,6 @@ def _control_table_path(config: PipelineConfig) -> str:
 
 
 def _file_hash(path: str) -> str:
-    """Hash de conteúdo (sha256) do arquivo — barato para os volumes deste
-    desafio; em produção com arquivos grandes, usar (tamanho + mtime) como
-    proxy mais barato do que ler o arquivo inteiro.
-    """
     h = hashlib.sha256()
     with open(path, "rb") as fh:
         for chunk in iter(lambda: fh.read(1024 * 1024), b""):
@@ -98,11 +64,7 @@ def list_pending_files(
     search_root: str,
     glob_pattern: str = "*.csv",
 ) -> list[PendingFile]:
-    """Lista arquivos novos ou alterados para uma fonte.
-
-    ``run_mode='full'`` ignora o controle e reprocessa tudo (backfill /
-    correção retroativa de regra de negócio).
-    """
+    # run_mode="full" ignora o controle e reprocessa tudo
     root = Path(search_root)
     all_files = sorted(str(p) for p in root.rglob(glob_pattern) if p.is_file())
 

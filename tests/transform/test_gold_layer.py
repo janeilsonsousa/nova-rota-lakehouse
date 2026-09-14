@@ -45,10 +45,6 @@ def _write_transacoes(config, filename: str, rows: list[str]) -> None:
 
 
 def test_fato_transacao_resolve_atributos_ponto_no_tempo(spark, tmp_config):
-    """Uma transação de 15/jan deve ver o cliente como ele era ANTES da
-    atualização cadastral de 01/fev (Campinas), mesmo esse sendo o estado
-    vigente hoje (Sao Paulo).
-    """
     _seed_full_chain(spark, tmp_config)
     _write_transacoes(tmp_config, "lote1.csv", ["T0001,K0001,2026-01-15 10:00:00,50.00,5411,Loja X,POS,BR,BRL"])
     ingest_source(spark, tmp_config, "transacoes")

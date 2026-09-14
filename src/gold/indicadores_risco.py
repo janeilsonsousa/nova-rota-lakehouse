@@ -1,17 +1,4 @@
-"""Ouro: ``gold_indicadores_risco`` — visão consolidada de eventos de risco,
-estornos e chargebacks por cliente e mês.
-
-Granularidade e chaves
------------------------
-- **Grão**: 1 linha por (``id_cliente``, ``ano_mes``) — mesmo grão de
-  ``gold_cliente_mes`` para permitir join 1:1 direto entre comportamento e
-  risco na mesma consulta.
-- **Fonte**: ``gold_fato_transacao`` (contagens agregadas por transação) +
-  ``silver_eventos_risco`` (quebra por tipo de evento, que não está
-  denormalizada na fato para não incrementar o grão dela).
-- **taxa_estorno**: ``qtd_estornos / qtd_transacoes`` do mês — indicador
-  direto de propensão a estorno, útil como feature para modelos de risco.
-"""
+# gold_indicadores_risco: risco/estorno/chargeback por (id_cliente, ano_mes), mesmo grão de gold_cliente_mes.
 
 from __future__ import annotations
 

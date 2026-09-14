@@ -1,7 +1,3 @@
-"""Testes unitários puros (sem Spark) do módulo de configuração — rodam em
-milissegundos, não segundos, e por isso são o primeiro sinal em CI.
-"""
-
 from __future__ import annotations
 
 from datetime import date

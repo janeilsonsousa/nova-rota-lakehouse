@@ -1,28 +1,6 @@
-"""Ouro: ``gold_cliente_mes`` — métricas comportamentais mensais por cliente.
-
-Granularidade e chaves
------------------------
-- **Grão**: 1 linha por (``id_cliente``, ``ano_mes``).
-- **Chave**: composta (``id_cliente``, ``ano_mes``).
-- **Fonte**: ``gold_fato_transacao`` (já resolvida ponto-no-tempo), nunca a
-  Prata diretamente — é a regra "Gold não lê Bronze/Silver direto para
-  métrica de negócio" aplicada aqui: todo indicador de cliente nasce do
-  fato consolidado, para não duplicar regra de estorno/cancelamento em cada
-  agregado.
-- **Regra de negócio**: transações estornadas contam em ``qtd_transacoes``
-  (aconteceram) mas não em ``valor_liquido``; ``valor_estornado`` é
-  reportado separadamente para dar visibilidade ao volume estornado.
-
-Estratégia de reprocessamento
-------------------------------
-Um mês já fechado pode ganhar uma transação atrasada meses depois. Um
-UPDATE incremental (somar o novo valor ao agregado existente) corrigiria o
-total, mas não corrigiria métricas não-aditivas (ticket médio, contagem de
-estabelecimentos distintos, comparação com mês anterior). Por isso
-recalculamos o agregado inteiro para todo (cliente, ano_mes) afetado pelo
-lote atual — mesmo padrão de "reconstrução por chave afetada" usado no
-SCD2 (ver src/silver/scd2.py) — e substituímos via MERGE INTO.
-"""
+# gold_cliente_mes: métricas mensais por cliente, grão (id_cliente, ano_mes), sempre lendo
+# de gold_fato_transacao. Recalcula o (cliente, mês) inteiro em vez de somar incremental,
+# porque ticket médio e outras métricas não são aditivas.
 
 from __future__ import annotations
 
@@ -62,9 +40,7 @@ def build_gold_cliente_mes(spark: SparkSession, config: PipelineConfig) -> dict:
         if is_empty(affected):
             logger.info("nenhum (cliente, mês) afetado nesta execução")
             return {"tabela": "gold_cliente_mes", "gravados": 0}
-        # A agregação de um mês precisa de TODAS as transações daquele mês,
-        # não só as novas — reagregamos a partir da tabela cheia, filtrando
-        # apenas os pares (cliente, mês) que o lote atual tocou.
+        # reagrega o mês inteiro, não só as linhas novas
         pares_afetados = affected.withColumnRenamed("id_cliente_na_data", "id_cliente")
         fato_escopo = fato_com_mes.join(pares_afetados, ["id_cliente", "ano_mes"], "inner")
     else:
@@ -85,9 +61,7 @@ def build_gold_cliente_mes(spark: SparkSession, config: PipelineConfig) -> dict:
         .withColumn("ticket_medio", F.round(F.col("valor_liquido") / F.col("qtd_transacoes"), 2))
     )
 
-    # LAG/comparação com mês anterior exige o HISTÓRICO completo do
-    # cliente (não só os meses afetados), senão a primeira linha do lote
-    # perderia a referência ao mês anterior real.
+    # LAG precisa do histórico completo, não só dos meses afetados
     historico = fato_com_mes.groupBy("id_cliente", "ano_mes").agg(F.sum("valor_liquido").alias("valor_liquido"))
     window = Window.partitionBy("id_cliente").orderBy("ano_mes")
     historico = historico.withColumn("valor_liquido_mes_anterior", F.lag("valor_liquido").over(window)).select(

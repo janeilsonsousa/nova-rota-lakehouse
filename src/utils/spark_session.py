@@ -1,12 +1,4 @@
-"""Fábrica de SparkSession portátil entre Databricks e execução local.
-
-Em um notebook Databricks já existe uma ``SparkSession`` ativa (variável
-global ``spark``) com o Delta Lake e o Unity Catalog configurados pelo
-runtime — nesse caso apenas reaproveitamos essa sessão. Em execução local
-(testes, desenvolvimento, CI) construímos uma sessão Spark local com o
-Delta Lake OSS via ``delta-spark``, para que o mesmo código de
-ingestion/silver/gold rode sem nenhuma dependência de cluster.
-"""
+# Cria a SparkSession. No Databricks reaproveita a sessão ativa; local, monta uma com Delta OSS.
 
 from __future__ import annotations
 
@@ -18,12 +10,7 @@ from pyspark.sql import SparkSession
 
 
 def _ensure_windows_hadoop_home() -> None:
-    """No Windows, o Spark local precisa do winutils.exe (HADOOP_HOME) para
-    operações de filesystem usadas pelo Delta Lake. Em Databricks isso nunca
-    é necessário (roda em Linux); aqui detectamos automaticamente o
-    ``winutils`` versionado no próprio repositório (``tools/hadoop-win``)
-    para que qualquer pessoa no Windows rode o projeto sem setup manual.
-    """
+    # winutils.exe vem versionado em tools/hadoop-win pra não precisar instalar nada
     if platform.system() != "Windows" or os.environ.get("HADOOP_HOME"):
         return
     candidate = Path(__file__).resolve().parents[2] / "tools" / "hadoop-win"
@@ -33,12 +20,7 @@ def _ensure_windows_hadoop_home() -> None:
 
 
 def _ensure_worker_python() -> None:
-    """Garante que os workers do PySpark usem o mesmo interpretador do
-    driver (o Python do venv), em vez de resolver ``python`` pelo PATH do
-    SO — no Windows isso pode acidentalmente pegar o alias da Microsoft
-    Store (WindowsApps) e quebrar a serialização com um erro de socket
-    difícil de diagnosticar (``Connection reset``).
-    """
+    # sem isso o Windows às vezes resolve "python" pro alias da Store e quebra o socket
     import sys
 
     os.environ.setdefault("PYSPARK_PYTHON", sys.executable)
@@ -57,12 +39,7 @@ def get_spark(app_name: str = "nova_rota_lakehouse") -> SparkSession:
 
     builder = (
         SparkSession.builder.appName(app_name)
-        # local[1]: no PySpark 3.5.x + Python 3.12 no Windows, partições
-        # vazias derrubam o worker Python com um EOFException pouco
-        # descritivo (bug de ambiente, não do pipeline — ver docs/decisions.md,
-        # ADR "Execução local no Windows"). Com 1 core e minPartitionNum=1
-        # eliminamos partições vazias no dev local; em Databricks (cluster
-        # real, Linux) essa restrição não existe e o paralelismo é normal.
+        # local[1] + minPartitionNum 1: evita partição vazia, que derruba o worker no Windows
         .master("local[1]")
         .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
         .config(
@@ -74,11 +51,7 @@ def get_spark(app_name: str = "nova_rota_lakehouse") -> SparkSession:
         .config("spark.sql.files.minPartitionNum", "1")
         .config("spark.ui.showConsoleProgress", "false")
         .config("spark.driver.memory", "2g")
-        # Evita reaproveitar o worker Python entre tasks: numa sessão longa
-        # (dezenas de stages) o worker reciclado eventualmente entra num
-        # estado ruim e derruba a próxima ação que precise transferir dados
-        # reais para o driver (collect/take/isEmpty). Ver docs/decisions.md.
-        .config("spark.python.worker.reuse", "false")
+        .config("spark.python.worker.reuse", "false")  # worker reciclado dá pau em sessão longa
     )
     spark = configure_spark_with_delta_pip(builder).getOrCreate()
     spark.sparkContext.setLogLevel("WARN")

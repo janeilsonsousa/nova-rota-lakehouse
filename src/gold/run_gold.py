@@ -1,8 +1,3 @@
-"""Orquestra a camada Ouro. Ordem: fato primeiro (todo o resto depende
-dela), depois dimensões (independentes entre si), depois os agregados que
-leem a fato + dimensões.
-"""
-
 from __future__ import annotations
 
 from pyspark.sql import SparkSession
@@ -26,6 +21,7 @@ def run_gold_processing(spark: SparkSession, config: PipelineConfig) -> dict:
     logger = get_logger("gold.run", batch_id=config.batch_id)
     logger.info("iniciando processamento gold", run_mode=config.run_mode)
 
+    # fato primeiro, o resto depende dela
     fato_result = build_gold_fato_transacao(spark, config)
     dim_results = build_gold_dimensions(spark, config)
     cliente_mes_result = build_gold_cliente_mes(spark, config)

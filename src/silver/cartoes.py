@@ -1,13 +1,3 @@
-"""Prata: dimensão de cartões com histórico SCD Tipo 2 e integridade
-referencial com contas.
-
-Cartões cancelados preservam histórico (o SCD2 nunca apaga versões
-anteriores) e são excluídos de métricas futuras na camada Ouro através do
-filtro por ``status_cartao`` vigente no momento de cada transação — não
-aqui, na Prata, que é responsável apenas por manter os dados corretos e
-completos.
-"""
-
 from __future__ import annotations
 
 from delta.tables import DeltaTable

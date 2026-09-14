@@ -1,11 +1,7 @@
 # Databricks notebook source
 # MAGIC %md
-# MAGIC # 03 — Data products Ouro
-# MAGIC
-# MAGIC Fato transacional, dimensões e agregados de negócio. Lógica em
-# MAGIC `src/gold/`, testada em `tests/transform/test_gold_layer.py`.
-# MAGIC
-# MAGIC **Pré-requisito**: rodar `02_silver_processing` antes deste notebook.
+# MAGIC # 03 - Data products Ouro
+# MAGIC Fato, dimensões e agregados de negócio. Roda 02_silver_processing antes.
 
 # COMMAND ----------
 

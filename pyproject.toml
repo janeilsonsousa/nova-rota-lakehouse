@@ -1,7 +1,7 @@
 [project]
 name = "nova-rota-lakehouse"
 version = "0.1.0"
-description = "Data product Lakehouse (Bronze/Prata/Ouro) para a Cooperativa NovaRota - Case Sênior Engenharia de Dados"
+description = "Lakehouse Bronze/Prata/Ouro para a Cooperativa NovaRota"
 requires-python = ">=3.10,<3.13"
 readme = "README.md"
 

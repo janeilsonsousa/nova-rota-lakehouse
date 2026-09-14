@@ -1,7 +1,3 @@
-"""Prata: dimensão de contas com histórico SCD Tipo 2 e integridade
-referencial com clientes.
-"""
-
 from __future__ import annotations
 
 from delta.tables import DeltaTable

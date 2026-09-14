@@ -1,23 +1,4 @@
-"""Ouro: ``gold_features_cliente`` — snapshot de features para Data Science.
-
-Granularidade e chaves
------------------------
-- **Grão**: 1 linha por ``id_cliente`` (snapshot mais recente — não é
-  histórico; um modelo de propensão/risco consome "o estado do cliente
-  hoje", não uma série temporal completa, que já existe em
-  ``gold_cliente_mes``/``gold_indicadores_risco`` para quem precisar).
-- **Recomputo**: overwrite completo a cada execução. É um *feature store*
-  simplificado — o custo de recalcular tudo é baixo neste volume e a
-  alternativa (MERGE incremental) não traria ganho real, já que quase toda
-  feature aqui é uma agregação all-time ou uma comparação com o resto da
-  base (percentil), que muda para todo mundo a cada nova transação de
-  qualquer cliente.
-- **RFM + segmentação**: recency/frequency/monetary clássicos, mais
-  percentil de gasto dentro da própria cidade e do próprio segmento
-  (``PERCENT_RANK``/``NTILE``) — a feature "quanto esse cliente gasta
-  comparado a pares parecidos" é normalmente mais informativa para um
-  modelo do que o valor absoluto.
-"""
+# gold_features_cliente: snapshot RFM + percentis por cliente, 1 linha cada, overwrite total.
 
 from __future__ import annotations
 
@@ -72,8 +53,6 @@ def build_gold_features_cliente(spark: SparkSession, config: PipelineConfig) -> 
         )
     )
 
-    # Segmentação: percentil de gasto dentro da própria cidade e do próprio
-    # segmento de negócio, e decil de gasto geral — usa PERCENT_RANK/NTILE.
     win_cidade = Window.partitionBy("cidade").orderBy(F.col("valor_liquido_total"))
     win_segmento = Window.partitionBy("segmento").orderBy(F.col("valor_liquido_total"))
     win_geral = Window.orderBy(F.col("valor_liquido_total"))

@@ -79,9 +79,6 @@ def test_transacoes_merge_evita_duplicidade_entre_lotes(spark, tmp_config):
 
 
 def test_transacao_atrasada_cai_na_particao_de_negocio_correta(spark, tmp_config):
-    """Uma transação de janeiro processada só em abril (arquivo atrasado)
-    deve ficar associada a dt_transacao=janeiro, não à data de ingestão.
-    """
     _seed_cartao(spark, tmp_config)
     _write_transacoes(
         tmp_config, "transacoes_2026-04-05_late.csv",

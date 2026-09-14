@@ -1,15 +1,5 @@
-"""Camada Bronze: ingestão incremental, idempotente, com preservação do dado
-bruto e metadados de rastreabilidade.
-
-Cada fonte é lida arquivo a arquivo (não em lote único) e unida via
-``unionByName(allowMissingColumns=True)``: isso é o que permite que um
-arquivo com colunas extras (evolução de schema, ex.: ``device_id`` e
-``ip_origem`` em ``transacoes_2026-04-10_schema_v2.csv``) conviva com
-arquivos antigos sem quebrar a leitura — as colunas ausentes nos arquivos
-antigos ficam ``NULL``, e a escrita Delta usa ``mergeSchema=true`` para
-evoluir o schema da tabela Bronze automaticamente, preservando o dado bruto
-completo (nenhuma coluna inesperada é descartada).
-"""
+# Bronze: ingestão incremental e idempotente. unionByName(allowMissingColumns=True)
+# deixa arquivo com colunas novas (schema_v2) conviver com arquivo antigo sem quebrar.
 
 from __future__ import annotations
 
@@ -109,12 +99,6 @@ def _add_bronze_metadata(df: DataFrame, config: PipelineConfig, source: SourceCo
 
 
 def ingest_source(spark: SparkSession, config: PipelineConfig, source_key: str) -> dict:
-    """Ingesta incrementalmente uma fonte. Retorna métricas da execução.
-
-    Idempotente: reexecutar sem novos arquivos não escreve nada (0 linhas).
-    Reprocessamento total: ``config.run_mode == 'full'`` ignora o controle e
-    relê tudo (útil para backfill/correção retroativa).
-    """
     logger = get_logger("ingestion.bronze", batch_id=config.batch_id).bind(source=source_key)
     source = SOURCES[source_key]
 
@@ -129,10 +113,7 @@ def ingest_source(spark: SparkSession, config: PipelineConfig, source_key: str) 
     bronze_df = _add_bronze_metadata(raw_df, config, source)
 
     target_path = config.table_path("bronze", source.bronze_table)
-    # Nota: sem persist() (não suportado em Databricks Serverless — ver
-    # docs/decisions.md), count() e write() recalculam o plano cada um. Para
-    # o volume deste pipeline isso é irrelevante em custo; portabilidade
-    # entre serverless e cluster clássico importa mais aqui.
+    # sem persist() -- não suportado em Databricks Serverless, então recalcula 2x
     row_count = bronze_df.count()
     (
         bronze_df.write.format("delta")

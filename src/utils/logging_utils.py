@@ -1,11 +1,4 @@
-"""Logging estruturado (JSON por linha) para o pipeline.
-
-Cada etapa do pipeline (bronze/silver/gold) deve logar início, fim,
-contagem de linhas processadas/rejeitadas e erros usando este logger, para
-que em produção (Databricks Workflows) as mensagens sejam facilmente
-correlacionáveis por ``batch_id`` em uma ferramenta de observabilidade
-(ex.: exportadas para uma tabela de log ou para o Log Analytics workspace).
-"""
+# Log estruturado em JSON, uma linha por evento, pra dar pra filtrar por batch_id depois.
 
 from __future__ import annotations
 
@@ -44,8 +37,6 @@ def get_logger(name: str, batch_id: str | None = None) -> _ContextLogger:
 
 
 class _ContextLogger:
-    """Wrapper fino que injeta campos de contexto (ex.: batch_id, etapa)."""
-
     def __init__(self, logger: logging.Logger, context: dict[str, Any]):
         self._logger = logger
         self._context = context

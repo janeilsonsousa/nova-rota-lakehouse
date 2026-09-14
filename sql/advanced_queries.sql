@@ -1,22 +1,6 @@
--- =============================================================================
--- NovaRota Lakehouse — SQL avançado (requisito 6 do desafio)
--- =============================================================================
--- Convenção de nomes: as queries abaixo usam `nova_rota.gold.<tabela>` /
--- `nova_rota.silver.<tabela>` (padrão Unity Catalog em Databricks). Em
--- execução local (spark-warehouse, sem Unity Catalog) troque o prefixo
--- `nova_rota.` por nada, ex.: `gold.gold_fato_transacao`.
---
--- Cada bloco abaixo é autocontido e cobre pelo menos um item exigido no
--- requisito 6 do desafio; o cabeçalho de cada bloco lista os itens
--- cobertos.
--- =============================================================================
+-- Queries usam nova_rota.gold.<tabela>. Local sem Unity Catalog, tira o prefixo nova_rota.
 
-
--- =============================================================================
--- 1) CTEs encadeadas + ROW_NUMBER: cliente vigente com sua transação mais
---    recente e o ranking de valor dentro do próprio mês.
---    Cobre: CTEs encadeadas, ROW_NUMBER (seleção de registro vigente/top-N).
--- =============================================================================
+-- 1) CTEs + ROW_NUMBER: maior transação do cliente por mês
 WITH transacoes_com_mes AS (
     SELECT
         f.id_transacao,
@@ -53,10 +37,7 @@ JOIN nova_rota.gold.gold_dim_cliente d ON d.id_cliente = t.id_cliente_na_data
 ORDER BY t.ano_mes, maior_valor_liquido_do_mes DESC;
 
 
--- =============================================================================
--- 2) LAG / LEAD: comportamento do cliente entre meses consecutivos.
---    Cobre: LAG e/ou LEAD para comparar comportamento entre períodos.
--- =============================================================================
+-- 2) LAG / LEAD: comportamento entre meses consecutivos
 SELECT
     id_cliente,
     ano_mes,
@@ -74,12 +55,7 @@ FROM nova_rota.gold.gold_cliente_mes
 ORDER BY id_cliente, ano_mes;
 
 
--- =============================================================================
 -- 3) FIRST_VALUE / LAST_VALUE: primeira e última transação de cada cliente
---    (comportamento inaugural vs. mais recente), lado a lado em cada linha.
---    Cobre: FIRST_VALUE ou LAST_VALUE para identificar primeiro/último
---    comportamento relevante.
--- =============================================================================
 SELECT DISTINCT
     id_cliente_na_data AS id_cliente,
     FIRST_VALUE(id_transacao) OVER (
@@ -110,10 +86,7 @@ FROM nova_rota.gold.gold_fato_transacao
 ORDER BY id_cliente;
 
 
--- =============================================================================
--- 4) NTILE / PERCENT_RANK: segmentação de clientes por volume de gasto.
---    Cobre: NTILE, PERCENT_RANK ou percentis para segmentação de clientes.
--- =============================================================================
+-- 4) NTILE / PERCENT_RANK: segmentação de clientes por gasto
 WITH gasto_cliente AS (
     SELECT
         id_cliente,
@@ -135,13 +108,7 @@ FROM gasto_cliente
 ORDER BY valor_liquido_total DESC;
 
 
--- =============================================================================
--- 5) Anomalias simples de comportamento transacional: transação com valor
---    muito acima do padrão histórico do PRÓPRIO cliente (z-score simplificado
---    via média + desvio padrão móvel das transações anteriores do cliente).
---    Cobre: query que identifique anomalias simples de comportamento
---    transacional.
--- =============================================================================
+-- 5) anomalia: transação com valor muito acima do padrão do próprio cliente (z-score)
 WITH stats_cliente AS (
     SELECT
         id_cliente_na_data AS id_cliente,
@@ -150,7 +117,7 @@ WITH stats_cliente AS (
         COUNT(*)            AS qtd_transacoes_historico
     FROM nova_rota.gold.gold_fato_transacao
     GROUP BY id_cliente_na_data
-    HAVING COUNT(*) >= 3   -- exige histórico mínimo para o desvio padrão fazer sentido
+    HAVING COUNT(*) >= 3
 )
 SELECT
     f.id_transacao,
@@ -174,13 +141,7 @@ WHERE s.desvio_valor > 0
 ORDER BY z_score DESC;
 
 
--- =============================================================================
--- 6) Cliente contra o próprio histórico E contra cidade/segmento: compara o
---    ticket médio do cliente no mês com (a) sua própria média histórica e
---    (b) a média de clientes da mesma cidade/segmento no mesmo mês.
---    Cobre: query que compare o cliente contra seu próprio histórico e
---    contra sua cidade/segmento.
--- =============================================================================
+-- 6) cliente vs. próprio histórico e vs. cidade/segmento (ticket médio)
 WITH cliente_mes_enriquecido AS (
     SELECT
         cm.id_cliente,
@@ -224,18 +185,9 @@ JOIN media_cidade_segmento_mes cs
 ORDER BY c.id_cliente, c.ano_mes;
 
 
--- =============================================================================
--- 7) MERGE INTO — exemplo autocontido de carga incremental idempotente em
---    SQL puro (a implementação real do pipeline usa a API PySpark/Delta
---    equivalente — ver src/silver/transacoes.py e src/silver/scd2.py; este
---    bloco documenta o mesmo padrão em SQL para quem for operar via
---    notebook SQL/Databricks SQL Warehouse).
---    Cobre: pelo menos um MERGE INTO em SQL ou PySpark/Delta.
--- =============================================================================
+-- 7) MERGE INTO em SQL puro (a implementação real fica em src/silver/transacoes.py)
 MERGE INTO nova_rota.silver.silver_transacoes AS t
 USING (
-    -- fonte: um novo lote de transações já limpo/validado (equivalente ao
-    -- `staged` calculado em src/silver/transacoes.py após o quality gate)
     SELECT
         id_transacao, id_cartao, data_transacao, CAST(data_transacao AS DATE) AS dt_transacao,
         valor, mcc, estabelecimento, canal, pais, moeda, device_id, ip_origem,
@@ -246,26 +198,16 @@ USING (
             PARTITION BY id_transacao ORDER BY timestamp_ingestao DESC
         ) AS rn
         FROM nova_rota.bronze.bronze_transacoes
-        WHERE batch_id = :batch_id_atual   -- parametrizado pela execução (widget/param do notebook)
+        WHERE batch_id = :batch_id_atual
     )
-    WHERE rn = 1  -- mesma id_transacao pode se repetir dentro do lote (duplicidade intra-arquivo)
+    WHERE rn = 1  -- mesma id_transacao pode repetir dentro do lote
 ) AS s
 ON t.id_transacao = s.id_transacao
 WHEN MATCHED THEN UPDATE SET *
 WHEN NOT MATCHED THEN INSERT *;
 
 
--- =============================================================================
--- 8) Plano de execução / estratégia de joins (requisito 8 — performance):
---    exemplo de como validar o plano de um dos joins mais custosos do
---    pipeline (join ponto-no-tempo fato x dimensão SCD2). Rode em um
---    notebook Databricks com EXPLAIN FORMATTED e confira:
---    (a) se o join é BroadcastHashJoin (dimensão pequena cabe em memória —
---        esperado aqui, já que clientes/contas/cartões são poucas dezenas
---        de milhares de linhas mesmo em produção real de uma cooperativa
---        de porte médio) e (b) se não há shuffle desnecessário na tabela
---        fato (maior volume).
--- =============================================================================
+-- 8) plano de execução do join ponto-no-tempo fato x dimensão SCD2 (espera BroadcastHashJoin)
 EXPLAIN FORMATTED
 SELECT f.id_transacao, c.cidade
 FROM nova_rota.gold.gold_fato_transacao f
