@@ -1,0 +1,71 @@
+# queries rodadas via SQL Warehouse serverless em 2026-09-14, depois do job
+# nova-rota-teste-completo (run_id 938636017244972) terminar com sucesso
+
+--- tabelas registradas no catalogo nova_rota ---
+database | tableName | isTemporary
+gold | gold_cliente_mes | false
+gold | gold_dim_cartao | false
+gold | gold_dim_cliente | false
+gold | gold_dim_conta | false
+gold | gold_dim_estabelecimento | false
+gold | gold_fato_transacao | false
+gold | gold_features_cliente | false
+gold | gold_indicadores_risco | false
+
+--- tabelas bronze ---
+database | tableName | isTemporary
+bronze | bronze_cartoes_cdc | false
+bronze | bronze_clientes_cdc | false
+bronze | bronze_contas_cdc | false
+bronze | bronze_estornos | false
+bronze | bronze_eventos_risco | false
+bronze | bronze_transacoes | false
+
+--- tabelas silver ---
+database | tableName | isTemporary
+silver | silver_cartoes | false
+silver | silver_clientes | false
+silver | silver_contas | false
+silver | silver_estornos | false
+silver | silver_eventos_risco | false
+silver | silver_transacoes | false
+
+--- volumetria bronze_transacoes ---
+linhas
+1162
+
+--- volumetria silver_transacoes ---
+linhas
+578
+
+--- duplicidade id_transacao na silver (deve ser 0) ---
+ids_duplicados
+0
+
+--- volumetria gold_fato_transacao ---
+linhas
+578
+
+--- volumetria gold_cliente_mes ---
+linhas
+108
+
+--- volumetria gold_indicadores_risco ---
+linhas
+108
+
+--- volumetria gold_features_cliente ---
+linhas
+31
+
+--- cliente com historico SCD2 (mais de 1 versao) ---
+id_cliente | versoes
+C0018 | 2
+C0007 | 2
+C0003 | 2
+C0012 | 2
+C0024 | 2
+
+--- quarentena clientes ---
+motivos_quarentena | linhas
+estado_invalido; renda_negativa | 4

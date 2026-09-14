@@ -117,4 +117,4 @@ Ver ADR-01 em `docs/decisions.md`.
 | MERGE incremental idempotente em toda Prata/Ouro | — | Mesma abordagem |
 | Quarentena com motivo por regra | Alerta automatizado por taxa de quarentena | Job de observabilidade dedicado |
 | Testes de transformação com massa pequena | Teste de carga/volume | Suite de performance em staging |
-| Unity Catalog provisionado (catálogo, schemas, 13 tabelas — ADR-09) | Permissão granular por papel | Workspace corporativo + script de setup |
+| Unity Catalog provisionado (catálogo, schemas, 20 tabelas — ADR-09) | Permissão granular por papel | Workspace corporativo + script de setup |

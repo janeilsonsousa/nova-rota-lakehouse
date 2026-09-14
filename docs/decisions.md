@@ -94,6 +94,14 @@ O pipeline lê/escreve por path físico (portável entre local e Databricks) e n
 
 ---
 
+## ADR-10 — `datetime.UTC` não existe no Python do Serverless
+
+Achei rodando o pipeline completo no Databricks de novo (job `nova-rota-teste-completo`): o notebook `01_bronze_ingestion` quebrava com `ImportError: cannot import name 'UTC' from 'datetime'`. `datetime.UTC` só foi adicionado no Python 3.11, mas o Serverless roda Python 3.10 — e o `pyproject.toml` já dizia `requires-python = ">=3.10"`.
+
+A causa: o `ruff` estava com `target-version = "py311"`, então ele sugeria trocar `datetime.timezone.utc` pelo alias `datetime.UTC` (regra UP017) — o que funciona local (Python 3.12) mas não no Serverless. Troquei `src/utils/logging_utils.py` de volta pra `timezone.utc` e corrigi o `target-version` do ruff pra `py310`, pra não sugerir de novo essa troca. Rodei tudo de novo (local + Databricks) depois do fix, os 28 testes e os 5 notebooks passaram limpo. Evidência em `docs/evidencias/databricks_08_job_run_completo.jpg`.
+
+---
+
 ## O que ficou de fora
 
 - **Auto Loader / Structured Streaming real**: desenhado no ADR-01, não implementado por falta de object storage cloud reproduzível.
