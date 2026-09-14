@@ -1,31 +1,25 @@
 # Evidências de execução
 
-Logs de execução, prints do Databricks com os notebooks rodados, e resultado dos testes.
+Rodei cada notebook separado (um por vez, na interface do Databricks) e depois o job completo em sequência, tudo em compute Serverless. Os arquivos abaixo estão numerados na ordem em que o pipeline roda.
 
 ## Índice
 
-| Arquivo | Descrição |
+| Arquivo | O que mostra |
 |---|---|
-| `local_pipeline_run.log` | log JSON de uma execução local ponta a ponta, com prova de idempotência (reexecução processa 0 linhas) |
-| `pytest_full_suite.log` | saída da suíte completa (28 testes) |
-| `databricks_03_gold_volumetria.jpg` | notebook 03 rodado no Databricks Serverless, 8 tabelas Ouro criadas |
-| `databricks_04_sql_ntile_percentrank.jpg` | notebook 04, query de segmentação NTILE/PERCENT_RANK |
-| `databricks_05_catalog_bronze.jpg` | Catalog Explorer — schema bronze, 6 tabelas |
-| `databricks_06_catalog_silver.jpg` | Catalog Explorer — schema silver, 6 tabelas SCD2 |
-| `databricks_07_catalog_gold_arvore_completa.jpg` | árvore completa do catálogo, 13 tabelas nas 3 camadas |
-| `databricks_08_job_run_completo.jpg` | job com os 5 notebooks (00→04) rodados em sequência no Serverless, todos verdes, 7m21s |
-| `databricks_09_catalog_completo_20_tabelas.jpg` | catálogo depois da camada Ouro completa: 6 bronze + 6 silver + 8 gold = 20 tabelas |
-| `databricks_volumetria_sql.txt` | volumetria e checagem de duplicidade rodada via SQL Warehouse depois do run acima |
+| `01_setup_ambiente.jpg` | notebook 00 rodado sozinho — cria catálogo/schemas/Volume, valida import do `src/` |
+| `02_bronze_ingestion.jpg` | notebook 01 sozinho — as 6 tabelas Bronze criadas, com contagem de linhas e amostra de `bronze_transacoes` |
+| `03_silver_processing.jpg` | notebook 02 sozinho — histórico SCD2 de um cliente com 2 versões (`flag_vigente` mudando) |
+| `04_gold_data_products.jpg` | notebook 03 sozinho — volumetria das 8 tabelas Ouro |
+| `05_sql_analysis.jpg` | notebook 04 sozinho — query de segmentação NTILE/PERCENT_RANK rodando contra as views |
+| `06_job_completo.jpg` | os 5 notebooks (00→04) encadeados num job só, todos verdes, ~6m30s |
+| `07_catalog_explorer.jpg` | Catalog Explorer depois do job: schema bronze (6 tabelas) e gold (8 tabelas) expandidos |
+| `08_volumetria_sql.txt` | contagem de linhas e checagem de duplicidade rodada via SQL Warehouse logo depois do job |
+| `local_pipeline_run.log` | log JSON de uma execução local ponta a ponta (`python -m src.run_pipeline`) |
+| `pytest_full_suite.log` | saída da suíte completa (28 testes: 14 unitários + 14 de transformação) |
 
-## Sobre o job `databricks_08`
+## Sobre os números
 
-Rodei esse job pra validar o pipeline inteiro de novo depois de mexer nos comentários do código (deixar
-menos "cara de IA"). Na primeira tentativa o notebook `01_bronze_ingestion` quebrou com
-`ImportError: cannot import name 'UTC' from 'datetime'` — o Databricks Serverless roda Python 3.10, e
-o `datetime.UTC` só existe a partir do 3.11. O `pyproject.toml` já declarava `requires-python >=3.10`, só
-que o `ruff` estava configurado pra sugerir sintaxe de 3.11 (foi ele que sugeriu o `UTC` em algum commit
-anterior). Troquei por `timezone.utc`, corrigi o `target-version` do ruff pra `py310`, e no segundo run
-passou tudo (ver `docs/decisions.md`, ADR-10).
+Bronze é append-only e a ingestão é idempotente por hash de arquivo — rodar de novo com o mesmo arquivo não duplica. Só que como venho rodando notebook/job várias vezes ao longo do desenvolvimento (cada vez com um Repo git diferente sincronizado ou reprocessando), as contagens em `bronze_transacoes` etc. vão crescendo ao longo do projeto — é o comportamento esperado de uma tabela append-only sendo alimentada repetidamente com a mesma massa de dados sintética, não é bug nem duplicidade real (isso é conferido explicitamente na query "duplicidade `id_transacao` na silver", que dá sempre 0).
 
 ## Como reproduzir
 
@@ -34,4 +28,4 @@ python -m src.run_pipeline --env local --batch-id evidencia-001
 python -m pytest -q
 ```
 
-Em Databricks: importa `notebooks/` via Repos e roda 00 → 01 → 02 → 03 → 04 em sequência.
+Em Databricks: importa `notebooks/` via Repos e roda 00 → 01 → 02 → 03 → 04 em sequência (cada um pode rodar sozinho ou como job encadeado).

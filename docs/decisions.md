@@ -90,7 +90,7 @@ A evidência real (`docs/evidencias/`) rodou em compute Serverless de um workspa
 2. **`.persist()` não suportado** — removido, é otimização, não afeta corretude nesse volume.
 3. **Workspace filesystem é read-only pra dado** — storage físico virou um Volume Unity Catalog, criado no notebook `00_setup_ambiente`.
 
-O pipeline lê/escreve por path físico (portável entre local e Databricks) e no final de cada camada tenta registrar a tabela no Unity Catalog por nome. Volume não é aceito como `LOCATION` de tabela registrada, então a função tenta `CREATE TABLE ... LOCATION` e cai pra `CREATE OR REPLACE TABLE ... AS SELECT` (managed table, com cópia física — desprezível nesse volume). É best-effort: falha nisso não derruba o pipeline. Ver `src/utils/catalog.py` e as evidências das 13 tabelas em `docs/evidencias/`.
+O pipeline lê/escreve por path físico (portável entre local e Databricks) e no final de cada camada tenta registrar a tabela no Unity Catalog por nome. Volume não é aceito como `LOCATION` de tabela registrada, então a função tenta `CREATE TABLE ... LOCATION` e cai pra `CREATE OR REPLACE TABLE ... AS SELECT` (managed table, com cópia física — desprezível nesse volume). É best-effort: falha nisso não derruba o pipeline. Ver `src/utils/catalog.py` e as 20 tabelas registradas (6 bronze + 6 silver + 8 gold) nas evidências em `docs/evidencias/`.
 
 ---
 
@@ -98,7 +98,7 @@ O pipeline lê/escreve por path físico (portável entre local e Databricks) e n
 
 Achei rodando o pipeline completo no Databricks de novo (job `nova-rota-teste-completo`): o notebook `01_bronze_ingestion` quebrava com `ImportError: cannot import name 'UTC' from 'datetime'`. `datetime.UTC` só foi adicionado no Python 3.11, mas o Serverless roda Python 3.10 — e o `pyproject.toml` já dizia `requires-python = ">=3.10"`.
 
-A causa: o `ruff` estava com `target-version = "py311"`, então ele sugeria trocar `datetime.timezone.utc` pelo alias `datetime.UTC` (regra UP017) — o que funciona local (Python 3.12) mas não no Serverless. Troquei `src/utils/logging_utils.py` de volta pra `timezone.utc` e corrigi o `target-version` do ruff pra `py310`, pra não sugerir de novo essa troca. Rodei tudo de novo (local + Databricks) depois do fix, os 28 testes e os 5 notebooks passaram limpo. Evidência em `docs/evidencias/databricks_08_job_run_completo.jpg`.
+A causa: o `ruff` estava com `target-version = "py311"`, então ele sugeria trocar `datetime.timezone.utc` pelo alias `datetime.UTC` (regra UP017) — o que funciona local (Python 3.12) mas não no Serverless. Troquei `src/utils/logging_utils.py` de volta pra `timezone.utc` e corrigi o `target-version` do ruff pra `py310`, pra não sugerir de novo essa troca. Depois do fix rodei tudo de novo, notebook por notebook e depois o job completo — evidência em `docs/evidencias/` (06_job_completo.jpg em diante).
 
 ---
 

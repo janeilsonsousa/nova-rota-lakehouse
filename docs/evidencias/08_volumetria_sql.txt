@@ -1,5 +1,5 @@
 # queries rodadas via SQL Warehouse serverless em 2026-09-14, depois do job
-# nova-rota-teste-completo (run_id 938636017244972) terminar com sucesso
+# nova-rota-teste-completo (run_id 714110151629095) terminar com sucesso
 
 --- tabelas registradas no catalogo nova_rota ---
 database | tableName | isTemporary
@@ -48,11 +48,11 @@ linhas
 
 --- volumetria gold_cliente_mes ---
 linhas
-108
+110
 
 --- volumetria gold_indicadores_risco ---
 linhas
-108
+110
 
 --- volumetria gold_features_cliente ---
 linhas
@@ -68,4 +68,4 @@ C0024 | 2
 
 --- quarentena clientes ---
 motivos_quarentena | linhas
-estado_invalido; renda_negativa | 4
+estado_invalido; renda_negativa | 8
